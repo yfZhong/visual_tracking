@@ -1,0 +1,9 @@
+<!--start a bagfile-->
+<launch>
+
+<param name="use_sim_time" type="bool" value="True"/>
+
+<node name="bgr_yuyv" pkg="bgr2yuyv" type="bgr2yuyv_node"  output="screen"> 
+  </node>
+
+</launch>

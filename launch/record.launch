@@ -1,0 +1,22 @@
+<!--start a bagfile-->
+<launch>
+
+
+
+
+
+<node name="bgr2yuyv" pkg="vision_6d_pose" type="bgr2yuyv"  output="screen"> 
+  </node>
+
+
+<!--record bagfiles-->
+<node pkg="rosbag" type="record" name="recordBag" output="screen" args="record /vision/yuyvImg /tf -O /home/yvonne/bags/yuyvImage_robotcupfield.bag"/>
+
+
+<!--node name="image_view3" pkg="image_view" type="image_view" respawn="false" output="screen">
+    <remap from="image" to="/vision/takenImg"/>
+    <param name="autosize" value="true" />
+  </node-->
+
+
+</launch>

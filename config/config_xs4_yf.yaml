@@ -1,0 +1,133 @@
+vision:
+  ballhsv:
+    h0: 0
+    h1: 180
+    s0: 0
+    s1: 114
+    v0: 107
+    v1: 255
+  calib:
+    filePath: /nimbro/share/launch/config/vision/cCFile.yml
+  camera:
+    devNumber: 0
+    flipHor: 0
+    flipVer: 0
+    heightUnDistortion: 1177
+    useBagfile: 1
+    widthUnDistortion: 1620
+  debug:
+    publishTime: 1
+    showAssociateLines: 1
+    showCamPose: 1
+    showCorrespondence: 1
+    showFieldHull: 1
+    showFieldModel: 1
+    showHoughLines: 1
+    showLineInfo: 0
+    showMarkers: 1
+    showMergedLines: 1
+    showRobPose: 1
+    showSkeletonPixels: 1
+  field:
+    BonnField: 0
+    MaxDistanceFromBottomOfImage: 200
+    maxContourCount: 4
+    minArea: 600
+  fieldhsv:
+    h0: 61
+    h1: 79
+    s0: 60
+    s1: 244
+    v0: 20
+    v1: 112
+  goal:
+    DistanceToMerge: 20
+    MaxOutField: 40
+    MinLineLength: 40
+    VoteDouble: 31
+    cannyThreadshold: 35
+    dilate: 0
+    erode: 0
+    jumpMax: 28
+    minContinuesColor: 20
+    minDoubleLength: 2
+    minEdgeValue: 100
+  goalhsv:
+    h0: 70
+    h1: 120
+    s0: 20
+    s1: 100
+    v0: 126
+    v1: 255
+  graphNode:
+    AngleToMerge: 20
+    DistanceCompToMerge: 100
+    LineWidth: 19
+    MaxDist: 400
+    MaxLineSegDistance: 50
+    MaxLineSegDistanceForJoint: 60
+    MaxProjectedDistance: 30
+    MergeJointDist: 1000
+    MinCmpLineLength: 10
+    MinDistForMerge: 1000
+    Min_adj: 40000
+    SmallAngle: 60
+  icp:
+    IcpInlierDistThreshold: 60000
+    KFOrientationCov: 0.1
+    KFPositionCov: 0.1
+    SamplePointDist_WorldCord: 0.1
+  line:
+    AngleToMerge: 15
+    AngleToMergeImg: 10
+    Div1: 0.5
+    Div2: 0.8
+    HoughLineMinLineLength: 50
+    HoughLineRho: 10
+    HoughLineTheta: 10
+    HoughLineVoteThreshold: 20
+    HoughLinemaxLineGap: 65
+    LocalOptimalRange: 0
+    MaxPointLineDistance: 60
+    MeasAreaThreshod: 50000
+    MeasLineLengthThreshod: 300
+    MeasLineMaxAngDifThreshod: 60
+    MeasLineNumThreshod: 4
+    MinLineLength: 100
+    MinLineSegDistance: 1
+    MinLineSegDistanceImg: 100
+    MinProjectedDistance: 0.25
+    MinProjectedDistanceImg: 7
+    MinSkeletonValue: 43
+    ObstacleLineDistance: -40
+  linehsv:
+    h0: 0
+    h1: 180
+    s0: 11
+    s1: 255
+    v0: 0
+    v1: 255
+  location:
+    x: 0
+    y: 0
+    z: 0.6
+  obstacle:
+    minArea: 300
+  obstaclehsv:
+    h0: 104
+    h1: 180
+    s0: 100
+    s1: 255
+    v0: 44
+    v1: 75
+  orientation:
+    x: 0
+    y: 0
+    z: 0
+  particleFilter:
+    HeadingOffset: 0
+    MinSumOfLineLengthOnImage: 100
+    ParticleNum: 0
+    RandomSamplePct: 0.2
+  projection:
+    timeToShift: 0.15
