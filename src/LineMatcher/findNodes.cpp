@@ -4,10 +4,10 @@
 #include <visual_tracking/LineMatcher/findNodes.h>
 
 // ****************************************************************************** //
-void  FindNodes::findNodes ( /* in_out */ int ( & matrix )[ H ][ W ], /* out_temp */ int ( & tmp )[ H ][ W ] /* OUT Node_Buffer * m_NodeBuffer, */ )
+void  FindNodes::findNodes ( /* in_out */ int ( & matrix )[ H ][ W ] /* OUT Node_Buffer * m_NodeBuffer, */ )
 // ****************************************************************************** //
-{
-
+{ 
+    
     memset( tmp, 0, sizeof ( int ) * H * W );
 
     m_NodeBuffer->clear( ); //<- Clear Node_Buffer for a new turn.
@@ -256,7 +256,7 @@ void FindNodes::FindMoreNodes ( /* in */ const int ( & matrix )[ H ][ W ] /* IN_
 
 
 // ****************************************************************************** //
-void FindNodes::FindCloseNodes ( /* in */const std::vector<float > &weightedWhiteValues /* IN const Trans_Buffer * m_TransBuffer, */ /* IN_OUT Node_Buffer * m_NodeBuffer, */ )
+void FindNodes::FindCloseNodes ( /* in */const float ( & weightedWhiteValues )[ H ][ W ] /* IN const Trans_Buffer * m_TransBuffer, */ /* IN_OUT Node_Buffer * m_NodeBuffer, */ )
 // ****************************************************************************** //
 {
 
@@ -354,7 +354,7 @@ void FindNodes::FindCloseNodes ( /* in */const std::vector<float > &weightedWhit
 
 // ****************************************************************************** //
 
-void FindNodes::ConnectCloseNodes ( /* in */ const std::vector<float > &weightedWhiteValues/* IN const Trans_Buffer * m_TransBuffer, */ /* IN_OUT Node_Buffer * m_NodeBuffer, */ )
+void FindNodes::ConnectCloseNodes ( /* in */ const float ( & weightedWhiteValues )[ H ][ W ]/* IN const Trans_Buffer * m_TransBuffer, */ /* IN_OUT Node_Buffer * m_NodeBuffer, */ )
 // ****************************************************************************** //
 {
 
@@ -1242,9 +1242,9 @@ void FindNodes::mainLoop(FrameGrabber & CamFrm){
     MaxDistanceForMergeNode1 = params.graphNode.MaxDistanceForMergeNode1->get();
     MaxDistanceForMergeNode2 = params.graphNode.MaxDistanceForMergeNode2->get();
   
-    int ln_iTmp  [ H ][ W ];
+   
     UNIT = CamFrm.MaximunNodeNum;
-    findNodes(CamFrm.skeletonPixelMatrix, ln_iTmp);
+    findNodes(CamFrm.skeletonPixelMatrix);
     //   cout<<"num of nodes  "<<m_NodeBuffer->size( )<<endl;
     ConnectTouchingNodes (CamFrm.skeletonPixelMatrix);
 
@@ -1286,12 +1286,10 @@ void FindNodes::mainLoop(FrameGrabber & CamFrm){
   
 
 //       PrintNodeBuffer("NodeBuffer.dat", m_NodeBuffer );
-//       PrintNodeBuffer("NodeBuffer_tmp2.dat", m_NodeBuffer_tmp );
-     
-      
+
 
       connectMoreNodes();
-       PrintReacherableComp("ReachableComp.dat" );
+//       PrintReacherableComp("ReachableComp.dat" );
       
 // 		     else if( m_Math::AngDif( a.ang, b.ang) > (90- AngleToMerge)
 // 		          &&  m_Math::getShortestDistance(a, b) <MaxLineSegDistanceForJoint){
@@ -1377,7 +1375,11 @@ void FindNodes::mainLoop(FrameGrabber & CamFrm){
       
     undistortedNodeSamplePoins.clear();
     distortionModel.UndistortP(NodeSamplePoins, undistortedNodeSamplePoins);
-      
+  
+//     NodeSamplePoins.clear();
+//     distortionModel.DistortP(undistortedNodeSamplePoins, NodeSamplePoins);
+//     undistortedNodeSamplePoins.clear();
+//     distortionModel.UndistortP(NodeSamplePoins, undistortedNodeSamplePoins);
 
   
 }
@@ -1638,7 +1640,7 @@ int FindNodes::closes_loop ( /* IN const Node_Buffer * m_NodeBuffer, */ /* in */
 }; // END of closes_loop METHOD
 
 
-int FindNodes::black_line_value ( /* in */ const std::vector<float > &weightedWhiteValues, /* IN const Node_Buffer * m_NodeBuffer, */ /* in */ const int i, /* in */ const int j )
+int FindNodes::black_line_value ( /* in */ const float ( & weightedWhiteValues )[ H ][ W ], /* IN const Node_Buffer * m_NodeBuffer, */ /* in */ const int i, /* in */ const int j )
 // ****************************************************************************** //
 {
     int xm;
@@ -1649,11 +1651,11 @@ int FindNodes::black_line_value ( /* in */ const std::vector<float > &weightedWh
     // * Compute coordinates of pixel (and its grey-value) in between node_i and node_j * //
     xm = ( ( ( * m_NodeBuffer )[ i ].x_pos + ( * m_NodeBuffer )[ j ].x_pos + 1 ) >> 1 );
     ym = ( ( ( * m_NodeBuffer )[ i ].y_pos + ( * m_NodeBuffer )[ j ].y_pos + 1 ) >> 1 );
-    vm = weightedWhiteValues[ ym *W +  xm ];
+    vm = weightedWhiteValues[ ym ][  xm ];
 
     // * Compute sum of grey-values of node_i and node_j and pixel in between * //
-    vij = vm + weightedWhiteValues[ ( * m_NodeBuffer )[ i ].y_pos *W + ( * m_NodeBuffer )[ i ].x_pos ] 
-	      + weightedWhiteValues[ ( * m_NodeBuffer )[ j ].y_pos *W + ( * m_NodeBuffer )[ j ].x_pos ];
+    vij = vm + weightedWhiteValues[ ( * m_NodeBuffer )[ i ].y_pos ][ ( * m_NodeBuffer )[ i ].x_pos ] 
+	      + weightedWhiteValues[ ( * m_NodeBuffer )[ j ].y_pos ][ ( * m_NodeBuffer )[ j ].x_pos ];
 
     if ( vij == 0 ) {
 	return 0;
@@ -1667,7 +1669,7 @@ int FindNodes::black_line_value ( /* in */ const std::vector<float > &weightedWh
 }; // END of back_line_value METHOD
 
 // ****************************************************************************** //
-void  FindNodes:: update_close_nodes( /* in */ const std::vector<float > &weightedWhiteValues, /* IN const Trans_Buffer * m_TransBuffer, */ /* IN_OUT Node_Buffer * m_NodeBuffer, */ /* in */ const int i )
+void  FindNodes:: update_close_nodes( /* in */ const float ( & weightedWhiteValues )[ H ][ W ], /* IN const Trans_Buffer * m_TransBuffer, */ /* IN_OUT Node_Buffer * m_NodeBuffer, */ /* in */ const int i )
 // ****************************************************************************** //
 {
     int j, k;

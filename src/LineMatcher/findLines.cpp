@@ -7,16 +7,12 @@ FindLines::FindLines()/*:filtered_data(H * W,0)*/{
     m_Top = 0;
     fpsData = 30;
     
-    H = params.camera.height->get();
-    W = params.camera.width->get();
-    siX = params.camera.widthUnDistortion->get();
-    siY = params.camera.heightUnDistortion->get();
     DIAGONAL_ANGLE_RNAGE = M_PI/2.0 /9.0 ;//10 degree
     
-    H_data = new int[W*H]; 
-    V_data = new int[W*H]; 
-    diagonal_data45 = new int[W*H]; 
-    diagonal_data135 = new int[W*H]; 
+//     H_data = new int[W*H]; 
+//     V_data = new int[W*H]; 
+//     diagonal_data45 = new int[W*H]; 
+//     diagonal_data135 = new int[W*H]; 
    
     MeasConf = 0;
 
@@ -25,7 +21,7 @@ FindLines::FindLines()/*:filtered_data(H * W,0)*/{
 
 FindLines::~FindLines(){      
 
-   delete[] H_data; delete[] V_data; delete[] diagonal_data135; delete[] diagonal_data45;
+//    delete[] H_data; delete[] V_data; delete[] diagonal_data135; delete[] diagonal_data45;
   
 }
 
@@ -88,24 +84,15 @@ void FindLines::findSkeletons(FrameGrabber & CamFrm){
 
     
     
-    
-    
-//     imshow(" skeletonPixels1  ", skeletonPixels1);
-//     waitKey( 1);
-    
-       
-    
-
-    
    
     if(debug_line_detector){
       
-      	tools.cvshowImg(CamFrm.weightedWhiteValues, "weightedWhiteValues");
-        //the output file will be saved in package "tmp_file"
-	tools.writePGM(CamFrm.weightedWhiteValues, "weightedWhiteValues");
-	tools.writeDAT(CamFrm.weightedWhiteValues, "weightedWhiteValues.dat");
-	
-        tools.cvshowImg(CamFrm.weightedWhiteValues, "smothWhiteValues");
+//      tools.cvshowImg(CamFrm.weightedWhiteValues, "weightedWhiteValues");
+//      //the output file will be saved in package "tmp_file"
+// 	tools.writePGM(CamFrm.weightedWhiteValues, "weightedWhiteValues");
+// 	tools.writeDAT(CamFrm.weightedWhiteValues, "weightedWhiteValues.dat");
+/*	
+        tools.cvshowImg(CamFrm.weightedWhiteValues, "smothWhiteValues");*/
     }
     
    
@@ -115,7 +102,7 @@ void FindLines::findSkeletons(FrameGrabber & CamFrm){
 
 
 
-void FindLines::applyLineFilter(/*in*/cv:: Mat Brightness_Channel,/*out*/std::vector< float > & weightedWhiteValues){
+void FindLines::applyLineFilter(/*in*/cv:: Mat Brightness_Channel,/*out*/float ( & weightedWhiteValues )[ H ][ W ]){
     float div_pct1 = params.line.Div1->get();
     float div_pct2 = params.line.Div2->get();//from  top to bottom [0-div_pct1, div_pct1-div_pct2, div_pct2-1]
   
@@ -127,10 +114,12 @@ void FindLines::applyLineFilter(/*in*/cv:: Mat Brightness_Channel,/*out*/std::ve
     
     int DOG_kernel_9[9] = {-3,-5,1,4,6,4,1,-5,-3}; //difference of gaussian kernel
  	
-    memset(H_data, 0, sizeof(int)*W*H);  
-    memset(V_data, 0, sizeof(int)*W*H);   
-    memset(diagonal_data45, 0, sizeof(int)*W*H);   
-    memset(diagonal_data135, 0, sizeof(int)*W*H); 
+//     memset(H_data, 0, sizeof(int)*W*H);  
+//     memset(V_data, 0, sizeof(int)*W*H);   
+//     memset(diagonal_data45, 0, sizeof(int)*W*H);   
+//     memset(diagonal_data135, 0, sizeof(int)*W*H); 
+    memset(weightedWhiteValues, 0, sizeof(float)*W*H); 
+    
     
     
     double max_v =std::numeric_limits<double>::min();
@@ -156,7 +145,7 @@ void FindLines::applyLineFilter(/*in*/cv:: Mat Brightness_Channel,/*out*/std::ve
 		
 	        if(i<half_size_9*kernel_type+1 || i>= W -half_size_9*kernel_type-1 || j< half_size_9*kernel_type+1 || j>= H -half_size_9*kernel_type-1
 		  || Brightness_Channel.data[ j *W +i] < params.line.MinBrightnessValue->get()){
-		    weightedWhiteValues[(j)*W + i] = 0;
+		    weightedWhiteValues[(j)][  i] = 0;
 		}
 		else{
 		    int tmp_v = 0, tmp_h = 0, tmp_d45 =0 ,tmp_d135=0;
@@ -190,21 +179,31 @@ void FindLines::applyLineFilter(/*in*/cv:: Mat Brightness_Channel,/*out*/std::ve
 			  tmp_d135 +=  DOG_kernel_9[os]* ((Brightness_Channel.data[new_pose] <<1) + Brightness_Channel.data[new_pose - W -1] +Brightness_Channel.data[new_pose + W +1]);  
 		    }
 		    
-		    H_data[j*W + i] = std::max(0,tmp_h );
-		    V_data[j*W + i] = std::max(0,tmp_v );
-		    diagonal_data45[j*W + i] = std::max(0,tmp_d45 );
-		    diagonal_data135[j*W + i] = std::max(0,tmp_d135 );
 		    
-
-			  weightedWhiteValues[(j)*W + i] = sqrt( pow(H_data[j*W + i],2)+ pow(V_data[j*W + i],2)+ 
-								 pow(diagonal_data45[j*W + i],2)+ pow(diagonal_data135[j*W + i],2));
+		    tmp_h = std::max(0,tmp_h );
+		    tmp_v = std::max(0,tmp_v );
+		    tmp_d45 = std::max(0,tmp_d45 );
+		    tmp_d135 = std::max(0,tmp_d135 );
+		    
+		    weightedWhiteValues[(j)][  i] = sqrt( pow(tmp_h,2)+ pow(tmp_v,2)+ 
+					    pow(tmp_d45,2)+ pow(tmp_d135,2));
+		    
+		    
+// 		    H_data[j ][ i] = std::max(0,tmp_h );
+// 		    V_data[j ][ i] = std::max(0,tmp_v );
+// 		    diagonal_data45[j ][ i] = std::max(0,tmp_d45 );
+// 		    diagonal_data135[j ][ i] = std::max(0,tmp_d135 );
+// 		    
+// 
+// 	             weightedWhiteValues[(j)][  i] = sqrt( pow(H_data[j ][ i],2)+ pow(V_data[j ][ i],2)+ 
+// 								 pow(diagonal_data45[j ][ i],2)+ pow(diagonal_data135[j ][ i],2));
 
 
 
 		}
 		
-		    if(max_v <weightedWhiteValues[j*W + i]){max_v = weightedWhiteValues[(j)*W + i];}
-// 		    if(min_v >weightedWhiteValues[j*W + i]){min_v = weightedWhiteValues[(j)*W + i];}
+		    if(max_v <weightedWhiteValues[j][  i]){max_v = weightedWhiteValues[(j)][ i];}
+// 		    if(min_v >weightedWhiteValues[j][ i]){min_v = weightedWhiteValues[(j)][  i];}
 		
 	    }
 	   
@@ -221,30 +220,168 @@ void FindLines::applyLineFilter(/*in*/cv:: Mat Brightness_Channel,/*out*/std::ve
 // 	  }
 //         tools::cvshowImg(test, "test");
 
-	 for ( int j =0; j< H; j++){
+
+
+// 	 for ( int j =0; j< H; j++){
+// 	     for ( int i = 0; i< W; i++){
+// 	            if(j < H- m_Top -1 ){
+// 		       weightedWhiteValues[j][  i] = 0;
+// 		      
+// 		    }
+// 		    else{
+// 		     weightedWhiteValues[j][  i] = (weightedWhiteValues[j][ i]-0.0)/(max_v-0.0) *255;  
+// 		
+// 		    }
+// 	     }
+// 	   
+// 	}
+
+	 for ( int j = H- m_Top -1; j< H; j++){
 	     for ( int i = 0; i< W; i++){
-	            if(j < H- m_Top -1 ){
-		       weightedWhiteValues[j*W + i] = 0;
-		      
-		    }
-		    else{
-		     weightedWhiteValues[j*W + i] = (weightedWhiteValues[j*W + i]-0.0)/(max_v-0.0) *255;  
-		
-		    }
+		     weightedWhiteValues[j][ i] = (weightedWhiteValues[j][ i]-0.0)/(max_v-0.0) *255;  
+
 	     }
 	   
 	}
+
+
 	 
     
     
 // //     tools.cvshowImg(weightedWhiteValues, "weightedWhiteValues");
   
-  
-  
 }
 
 
-void FindLines::RetrieveSkeleton (/* in */cv:: Mat & fieldConvexHull, /* in */ std::vector<float > &  matrix , /* out */  std::vector<cv::Point> &detectedPoins ){
+
+// void FindLines::applyLineFilter(/*in*/cv:: Mat Brightness_Channel,/*out*/std::vector< float > & weightedWhiteValues){
+//     float div_pct1 = params.line.Div1->get();
+//     float div_pct2 = params.line.Div2->get();//from  top to bottom [0-div_pct1, div_pct1-div_pct2, div_pct2-1]
+//   
+//     int offset_size_9 = 9; int half_size_9 = 4;
+//     int offset_v_9[9][2]  = {{0,-4},{0,-3},{0,-2},{0,-1},{0,0},{0,1},{0,2},{0,3},{0,4}}; //offset for vertical and horizontal kernel
+//     int offset_h_9[9][2]  = {{-4,0},{-3,0},{-2,0},{-1,0},{0,0},{1,0},{2,0},{3,0},{4,0}}; //offset for vertical and horizontal kernel
+//     int offset_d45_9[9][2]  = {{4,-4},{3,-3},{2,-2},{1,-1},{0,0},{-1,1},{-2,2},{-3,3},{-4,4}}; //offset for diagonal kernel
+//     int offset_d135_9[9][2]  = {{-4,-4},{-3,-3},{-2,-2},{-1,-1},{0,0},{1,1},{2,2},{3,3},{4,4}}; //offset for diagonal kernel
+//     
+//     int DOG_kernel_9[9] = {-3,-5,1,4,6,4,1,-5,-3}; //difference of gaussian kernel
+//  	
+//     memset(H_data, 0, sizeof(int)*W*H);  
+//     memset(V_data, 0, sizeof(int)*W*H);   
+//     memset(diagonal_data45, 0, sizeof(int)*W*H);   
+//     memset(diagonal_data135, 0, sizeof(int)*W*H); 
+//     
+//     
+//     double max_v =std::numeric_limits<double>::min();
+// //     min_v =std::numeric_limits<double>::max();
+//     
+//     
+//     
+//      int kernel_type = 3; // 3 times larger than the first kernel 
+// 	 //apply the dfg kernel
+//          for ( int i = 0; i< W; i++){  
+// 	    for ( int j = H-m_Top -1 ; j< H; j++){   
+// // 	    for ( int j = 0; j< H; j++){   
+// 		if(j<div_pct1 * H ){
+// 		    kernel_type = 1; // small kernel for upper part image
+// 		}
+// 		else if(j<div_pct2 * H){
+// 		    kernel_type = 2; // middle size kernel for middle part of the image
+// 		}
+// 		else{
+// 		    kernel_type = 3; // largest kernel for lower part of the image
+// 		}
+// 		
+// 		
+// 	        if(i<half_size_9*kernel_type+1 || i>= W -half_size_9*kernel_type-1 || j< half_size_9*kernel_type+1 || j>= H -half_size_9*kernel_type-1
+// 		  || Brightness_Channel.data[ j *W +i] < params.line.MinBrightnessValue->get()){
+// 		    weightedWhiteValues[(j)*W + i] = 0;
+// 		}
+// 		else{
+// 		    int tmp_v = 0, tmp_h = 0, tmp_d45 =0 ,tmp_d135=0;
+// 		    
+// 		    for(int os =0; os < offset_size_9; os++){ //os: offset size
+// 		          int currentpos = j*W + i; 
+// 			  int delta_x,delta_y;
+// 			  int new_pose;
+// 			  delta_x = 0;
+// 			  delta_y = offset_v_9[os][1] *kernel_type;
+// 			  new_pose =currentpos + delta_y * W + delta_x;
+// 			  tmp_h +=   DOG_kernel_9[os]* ((Brightness_Channel.data[new_pose] <<1) + Brightness_Channel.data[new_pose -1] +Brightness_Channel.data[new_pose +1] );
+// 			  
+// 			  
+// 			  delta_x = offset_h_9[os][0]*kernel_type;
+// 			  delta_y = 0;
+// 			  new_pose = currentpos + delta_y * W + delta_x;
+// 			  tmp_v +=  DOG_kernel_9[os]* ((Brightness_Channel.data[new_pose] <<1) + Brightness_Channel.data[new_pose +W]  + Brightness_Channel.data[new_pose -W]);
+// 			  
+// 			  delta_x = offset_d135_9[os][0]*kernel_type;
+// 			  delta_y = offset_d135_9[os][1]*kernel_type;
+// 			  new_pose = currentpos + delta_y * W + delta_x;
+// 
+// 			  tmp_d45 +=  DOG_kernel_9[os]* ((Brightness_Channel.data[new_pose] <<1) + Brightness_Channel.data[new_pose + W -1] +Brightness_Channel.data[new_pose - W +1]);
+// 			  
+// 			  
+// 			  delta_x = offset_d45_9[os][0]*kernel_type;
+// 			  delta_y = offset_d45_9[os][1]*kernel_type;
+// 			  new_pose = currentpos + delta_y * W + delta_x;
+// 
+// 			  tmp_d135 +=  DOG_kernel_9[os]* ((Brightness_Channel.data[new_pose] <<1) + Brightness_Channel.data[new_pose - W -1] +Brightness_Channel.data[new_pose + W +1]);  
+// 		    }
+// 		    
+// 		    H_data[j*W + i] = std::max(0,tmp_h );
+// 		    V_data[j*W + i] = std::max(0,tmp_v );
+// 		    diagonal_data45[j*W + i] = std::max(0,tmp_d45 );
+// 		    diagonal_data135[j*W + i] = std::max(0,tmp_d135 );
+// 		    
+// 
+// 			  weightedWhiteValues[(j)*W + i] = sqrt( pow(H_data[j*W + i],2)+ pow(V_data[j*W + i],2)+ 
+// 								 pow(diagonal_data45[j*W + i],2)+ pow(diagonal_data135[j*W + i],2));
+// 
+// 
+// 
+// 		}
+// 		
+// 		    if(max_v <weightedWhiteValues[j*W + i]){max_v = weightedWhiteValues[(j)*W + i];}
+// // 		    if(min_v >weightedWhiteValues[j*W + i]){min_v = weightedWhiteValues[(j)*W + i];}
+// 		
+// 	    }
+// 	   
+// 	   
+// 	}
+// 	  
+// // 	  std::vector<float > test(ORG_IMAGE_HEIGHT * ORG_IMAGE_WIDTH,0);
+// // 	   for ( int i = 0; i< W; i++){  
+// // 	    for ( int j =0 ; j< H; j++){  
+// // 	       test[(H-1-j)*W + i] = frame_raw_data[(j*W + i)*3];
+// // 	      
+// // 	    }
+// // 	     
+// // 	  }
+// //         tools::cvshowImg(test, "test");
+// 
+// 	 for ( int j =0; j< H; j++){
+// 	     for ( int i = 0; i< W; i++){
+// 	            if(j < H- m_Top -1 ){
+// 		       weightedWhiteValues[j*W + i] = 0;
+// 		      
+// 		    }
+// 		    else{
+// 		     weightedWhiteValues[j*W + i] = (weightedWhiteValues[j*W + i]-0.0)/(max_v-0.0) *255;  
+// 		
+// 		    }
+// 	     }
+// 	   
+// 	}
+// 	 
+//     
+//     
+// // //     tools.cvshowImg(weightedWhiteValues, "weightedWhiteValues");
+//   
+// }
+
+
+void FindLines::RetrieveSkeleton (/* in */cv:: Mat & fieldConvexHull, /* in */ const float ( & matrix )[ H ][ W ] , /* out */  std::vector<cv::Point> &detectedPoins ){
 
 //             Mat out = Mat::zeros(fieldConvexHull.size(), CV_8UC1);
 	     visited = Mat::zeros(fieldConvexHull.size(), CV_8UC1);
@@ -260,35 +397,35 @@ void FindLines::RetrieveSkeleton (/* in */cv:: Mat & fieldConvexHull, /* in */ s
                        continue;
                     }
                     register unsigned int vote = 0;
-                    register int val = matrix[ y * W + x ];
+                    register int val = matrix[ y ][ x ];
 		    if ( val < params.line.MinSkeletonValue->get() ) { // [2]
                        continue;
                     }
                     else { // [2]
-                        if ( val <= matrix[ y * W + x - 1 ] ) { // [3]
+                        if ( val <= matrix[ y ][ x - 1 ] ) { // [3]
                             vote++;
                         }
-                        if ( val <= matrix[ y * W + x + 1 ] ) { // [3]
+                        if ( val <= matrix[ y ][ x + 1 ] ) { // [3]
                             vote++;
                         }{ // [3]
                             vote++;
                         }
-                        if ( val <= matrix[ (y - 1) * W + x ] ) 
-                        if ( val <= matrix[ (y + 1) * W + x ] ) { // [3]
+                        if ( val <= matrix[ (y - 1) ][ x ] ) 
+                        if ( val <= matrix[ (y + 1) ][ x ] ) { // [3]
                             vote++;
                         }
                         if ( vote <= 3 ) { // [3]
-                            if ( val <= matrix[ (y - 1) * W + x - 1 ] ) { // [4]
+                            if ( val <= matrix[ (y - 1) ][ x - 1 ] ) { // [4]
                                 vote++;
                             }
-                            if ( val <= matrix[ (y + 1) * W + x - 1 ] ) { // [4]
+                            if ( val <= matrix[ (y + 1)][ x - 1 ] ) { // [4]
                                 vote++;
                             }
                             if ( vote < 3 ) { // [4]
-                                if ( val <= matrix[ (y - 1) * W + x + 1 ] ) { // [5]
+                                if ( val <= matrix[ (y - 1) ][ x + 1 ] ) { // [5]
                                     vote++;
                                 }
-                                if ( val <= matrix[ (y + 1) * W + x + 1 ] ) { // [5]
+                                if ( val <= matrix[ (y + 1) ][ x + 1 ] ) { // [5]
                                     vote++;
                                 }
                                 if ( vote < 3 ) { // [5]
@@ -332,7 +469,7 @@ void FindLines::removeObstacleBoarder (/* in */ vector< vector <cv::Point > > Ob
 }// END of pureSkeleton METHOD
 
 
-void FindLines::regionGlow( std::vector<float > &  matrix , Mat & visited, cv:: Mat & _fieldConvexHull, std::vector<pair<cv::Point, int> > & _detectedPoinsWithType ){
+void FindLines::regionGlow( const float ( & matrix )[ H ][ W ] , Mat & visited, cv:: Mat & _fieldConvexHull, std::vector<pair<cv::Point, int> > & _detectedPoinsWithType ){
   
   int size = _detectedPoinsWithType.size();
   for( int i =0; i< size; ++i){
@@ -350,8 +487,8 @@ void FindLines::regionGlow( std::vector<float > &  matrix , Mat & visited, cv:: 
 		}
 		//else check neighborhood of pixel if equal to (i,j)
 		else if (visited.at<uchar>(pixel.y ,pixel.x) == 0 && _fieldConvexHull.at<uchar>(pixel.y ,pixel.x) >0
-		       && matrix[ pixel.y * W + pixel.x ] >= matrix[ seed.y * W + seed.x ] -params.line.LocalOptimalRange->get()
-		       && matrix[ pixel.y * W + pixel.x ] > params.line.MinSkeletonValue->get()){
+		       && matrix[ pixel.y ][ pixel.x ] >= matrix[ seed.y ][ seed.x ] -params.line.LocalOptimalRange->get()
+		       && matrix[ pixel.y ][ pixel.x ] > params.line.MinSkeletonValue->get()){
                           visited.at<uchar>(pixel.y ,pixel.x) = 255;
 			  _detectedPoinsWithType.push_back(make_pair(cv::Point( pixel.x, pixel.y ) , 2) );
 			  push_back_neighbors(pixel.x ,pixel.y);
@@ -367,32 +504,36 @@ void FindLines::regionGlow( std::vector<float > &  matrix , Mat & visited, cv:: 
 
 
 // ****************************************************************************** //
-void FindLines::Smooth ( /* in_out */ std::vector<float > & matrix  ){
-            std::vector<float > tmp(H * W,0);
+void FindLines::Smooth ( /* in_out */float ( & matrix )[ H ][ W ]   ){
+  
+           float tmp[H][W];
+	   memset(tmp, 0, sizeof(int)*W*H);  
+  
+ 
 	    // * Low-pass 1st Time. * // 
 	    for ( int y = m_Top; y > -1; y-- ) {
 		for ( int x = 1; x < W - 1; x++ ) {
-		    tmp[ y * W + x ] = ( matrix[ y * W + x ] *2 ) + ( matrix[ y * W + x - 1 ] + matrix[ y * W + x + 1 ] );
+		    tmp[ y ][  x ] = ( matrix[ y ][  x ] *2 ) + ( matrix[ y ][  x - 1 ] + matrix[ y ][  x + 1 ] );
 		}
 	    }
 
 	    for ( int y =  m_Top-1  ; y > 0; y-- ) {
 		for ( int x = 0; x < W; x++ ) {
-		    matrix[ y * W + x ] = ( ( tmp[ y * W + x ] * 2 ) + ( tmp[ (y - 1) * W +x ] + tmp[ (y + 1) * W + x ] ) ) /16.0;
+		    matrix[ y ][  x ] = ( ( tmp[ y ][  x ] * 2 ) + ( tmp[ (y - 1) ][ x ] + tmp[ (y + 1) ][  x ] ) ) /16.0;
 		}
 	    }
 	    
 	    // * Low-pass 2nd Time. * //
 	    for ( int y = m_Top; y > -1 ; y-- ) {
 		for ( int x = 1; x < W - 1; x++ ) {
-		    tmp[ y * W + x ] = ( matrix[ y * W + x ] * 2 ) + ( matrix[ y * W + x - 1 ] + matrix[ y * W + x + 1 ] );
+		    tmp[ y ][  x ] = ( matrix[ y ][  x ] * 2 ) + ( matrix[ y ][  x - 1 ] + matrix[ y ][  x + 1 ] );
 		}
 	    }
 
 	    for ( int y = m_Top - 1; y > 0; y-- ) {
 		for ( int x = 0; x < W; x++ ) {
 
-		    matrix[ y * W + x ] = ( ( tmp[ y * W + x ] *2  ) + ( tmp[ (y - 1) * W + x ] + tmp[ (y + 1) * W + x ] ) ) / 16;
+		    matrix[ y ][  x ] = ( ( tmp[ y ][  x ] *2  ) + ( tmp[ (y - 1) ][  x ] + tmp[ (y + 1) ][  x ] ) ) / 16;
 		}
 	    }
 
@@ -574,12 +715,12 @@ void FindLines::findLines(FrameGrabber & CamFrm){
     
     if(debug_line_detector){
       
-      	tools.cvshowImg(CamFrm.weightedWhiteValues, "weightedWhiteValues");
-        //the output file will be saved in package "tmp_file"
-	tools.writePGM(CamFrm.weightedWhiteValues, "weightedWhiteValues");
-	tools.writeDAT(CamFrm.weightedWhiteValues, "weightedWhiteValues.dat");
+//       	tools.cvshowImg(CamFrm.weightedWhiteValues, "weightedWhiteValues");
+//         //the output file will be saved in package "tmp_file"
+// 	tools.writePGM(CamFrm.weightedWhiteValues, "weightedWhiteValues");
+// 	tools.writeDAT(CamFrm.weightedWhiteValues, "weightedWhiteValues.dat");
 	
-        tools.cvshowImg(CamFrm.weightedWhiteValues, "smothWhiteValues");
+//         tools.cvshowImg(CamFrm.weightedWhiteValues, "smothWhiteValues");
     }
     
    

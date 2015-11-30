@@ -34,10 +34,17 @@ namespace vision
 // 			double time;
 			std_msgs::Header header;
 			
-			int H, W, siX, siY;
+// 			int H, W, siX, siY;
+			enum{
+			    H = ORG_IMAGE_HEIGHT,
+			    W = ORG_IMAGE_WIDTH,
+			    siX = UNDISTOTED_IMAGE_WIDTH, 
+			    siY = UNDISTOTED_IMAGE_HEIGHT,
 			
+		        };
 			
-			std::vector<float > weightedWhiteValues;
+// 			std::vector<float > weightedWhiteValues;
+			float  weightedWhiteValues  [ H ][ W ];
 
 			ForwardProjection forw_Proj;
 			
@@ -54,7 +61,8 @@ namespace vision
 			int m_Top;
 	
 			unsigned int imagecounter;
-			int skeletonPixelMatrix    [ ORG_IMAGE_HEIGHT ][ ORG_IMAGE_WIDTH ];
+			int skeletonPixelMatrix    [ H ][ W ];
+// 			int skeletonPixelMatrix    [ UNDISTOTED_IMAGE_HEIGHT ][ UNDISTOTED_IMAGE_WIDTH ];
 // 			int *skeletonPixelMatrix;
 			int MaximunNodeNum;
 
@@ -63,14 +71,8 @@ namespace vision
 		* Constructor.
 		* The constructor will initialize all the necesary variables 
 		*/
-		FrameGrabber():
-		               weightedWhiteValues(ORG_IMAGE_HEIGHT * ORG_IMAGE_WIDTH,0)
-			       {
-			       
-			      W = params.camera.width->get();
-			      H = params.camera.height->get();
-			      siX = params.camera.widthUnDistortion->get();
-			      siY = params.camera.heightUnDistortion->get();
+		FrameGrabber() {
+
 			       imagecounter = 0;
 			       m_Top = 0;
 			       
@@ -91,8 +93,6 @@ namespace vision
 		* The destructor will clean all the vectors that were used during the soccer vision execution.
 		*/		
 		~FrameGrabber(){
-
-			weightedWhiteValues.clear();
 			ObstacleConvexHull.clear();
 
 		}

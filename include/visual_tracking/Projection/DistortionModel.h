@@ -51,6 +51,11 @@ public:
 			vector<Point> &resCountour);
 	bool DistortPFull(const vector<Point> contour,
 			vector<Point> &resCountour);
+	
+        int W , H , siX , siY , offsetx , offsety ;
+	double fx , fy , cx , cy ;
+	
+	
 };
 
 extern DistortionModel distortionModel;

@@ -220,19 +220,6 @@ bool DistortionModel::DistortPFull(const vector<Point> contour,
 {
 
 	vector<Point2f> resCountourFloat;
-	const int W = params.camera.width->get();
-	const int H = params.camera.height->get();
-
-	const int siX = params.camera.widthUnDistortion->get();
-	const int siY = params.camera.heightUnDistortion->get();
-
-	int offsetx = (siX - W) / 2.;
-	int offsety = (siY - H) / 2.;
-
-	double fx = cameraMatrix.at<double>(0, 0);
-	double fy = cameraMatrix.at<double>(1, 1);
-	double cx = cameraMatrix.at<double>(0, 2);
-	double cy = cameraMatrix.at<double>(1, 2);
 
 	vector<Point3f> contour3f;
 	for (size_t i = 0; i < contour.size(); i++)
@@ -270,19 +257,6 @@ bool DistortionModel::DistortP(const vector<Point> contour,
 {
 
 	vector<Point2f> resCountourFloat;
-	const int W = params.camera.width->get();
-	const int H = params.camera.height->get();
-
-	const int siX = params.camera.widthUnDistortion->get();
-	const int siY = params.camera.heightUnDistortion->get();
-
-	int offsetx = (siX - W) / 2.;
-	int offsety = (siY - H) / 2.;
-
-	double fx = cameraMatrix.at<double>(0, 0);
-	double fy = cameraMatrix.at<double>(1, 1);
-	double cx = cameraMatrix.at<double>(0, 2);
-	double cy = cameraMatrix.at<double>(1, 2);
 
 	vector<Point3f> contour3f;
 	for (size_t i = 0; i < contour.size(); i++)
@@ -322,8 +296,6 @@ bool DistortionModel::DistortP(const vector<Point> contour,
 void DistortionModel::undistortP_slow(const vector<Point> contour,
 		vector<Point> &resCountour)
 {
-	const int W = params.camera.width->get();
-	const int H = params.camera.height->get();
 
 	cv::Mat src = cv::Mat(1, contour.size(), CV_32FC2);
 	for (uint32_t i = 0; i < contour.size(); i++)
@@ -350,13 +322,7 @@ void DistortionModel::undistortP_slow(const vector<Point> contour,
 bool DistortionModel::UndistortP(const vector<Point> contour,
 		vector<Point> &resCountour)
 { 
-	const int siX = params.camera.widthUnDistortion->get();
-	const int siY = params.camera.heightUnDistortion->get();
 
-	const int W = params.camera.width->get();
-	const int H = params.camera.height->get();
-	int offsetx = (siX - W) / 2.;
-	int offsety = (siY - H) / 2.;
 
 	for (uint32_t i = 0; i < contour.size(); i++)
 	{
@@ -379,10 +345,7 @@ bool DistortionModel::UndistortP(const vector<Point> contour,
 }
 void DistortionModel::CreateUndistortFull(const Mat &rawImg, Mat &res)
 {
-	const int W = params.camera.width->get();
-	const int H = params.camera.height->get();
-	const int siX = params.camera.widthUnDistortion->get();
-	const int siY = params.camera.heightUnDistortion->get();
+
 	vector<Point> p, resP;
 	for (int y = 0; y < siY; y++)
 	{
@@ -423,8 +386,7 @@ void DistortionModel::CreateUndistortFull(const Mat &rawImg, Mat &res)
 
 void DistortionModel::CreateUndistort(const Mat &rawImg, Mat &res)
 {
-	const int W = params.camera.width->get();
-	const int H = params.camera.height->get();
+
 	vector<Point> p, resP;
 	for (int y = 0; y < H; y++)
 	{
@@ -435,8 +397,6 @@ void DistortionModel::CreateUndistort(const Mat &rawImg, Mat &res)
 	}
 	UndistortP(p, resP);
 
-	const int siX = params.camera.widthUnDistortion->get();
-	const int siY = params.camera.heightUnDistortion->get();
 	res = Mat::zeros(Size(siX, siY), CV_8UC3);
 
 	int counter = 0;
@@ -490,8 +450,12 @@ bool DistortionModel::Init()
 	}
 
 
-	const int W = params.camera.width->get();
-	const int H = params.camera.height->get();
+	  W = params.camera.width->get();
+	  H = params.camera.height->get();
+	  fx = cameraMatrix.at<double>(0, 0);
+	  fy = cameraMatrix.at<double>(1, 1);
+	  cx = cameraMatrix.at<double>(0, 2);
+	  cy = cameraMatrix.at<double>(1, 2);
 
 
 	distortionModel = Mat::zeros(Size(W, H), CV_32FC3);
@@ -541,6 +505,13 @@ bool DistortionModel::Init()
 	params.camera.widthUnDistortion->set((maxW * 2) + 1);
 	params.camera.heightUnDistortion->set((maxH * 2) + 1);
 	
+	siX = params.camera.widthUnDistortion->get();
+	siY = params.camera.heightUnDistortion->get();
+
+	offsetx = (siX - W) / 2.;
+	offsety = (siY - H) / 2.;
+	
+	
 	
 	unDistortionModelInit();
 
@@ -550,19 +521,6 @@ bool DistortionModel::Init()
 //-----------Yongfeng-----------//
   void DistortionModel::unDistortionModelInit(){
     
-	const int W = params.camera.width->get();
-	const int H = params.camera.height->get();
-	
-	const int siX = params.camera.widthUnDistortion->get();
-	const int siY = params.camera.heightUnDistortion->get();
-	
-	int offsetx = (siX - W) / 2.;
-	int offsety = (siY - H) / 2.;
-	
-	double fx = cameraMatrix.at<double>(0, 0);
-	double fy = cameraMatrix.at<double>(1, 1);
-	double cx = cameraMatrix.at<double>(0, 2);
-	double cy = cameraMatrix.at<double>(1, 2);
 	
 	unDistortionModel = Mat::zeros(Size(siX, siY), CV_8UC1);
 	vector<Point> p;

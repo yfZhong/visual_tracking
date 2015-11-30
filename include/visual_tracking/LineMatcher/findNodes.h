@@ -51,6 +51,8 @@ namespace vision
                 enum{
 		        H = ORG_IMAGE_HEIGHT,
 			W = ORG_IMAGE_WIDTH,
+			siX = UNDISTOTED_IMAGE_WIDTH, 
+			siY = UNDISTOTED_IMAGE_HEIGHT,
 			MAX_CONN = 4,
 			MAX_CLOSE = 100,
 			MAX_COS = 512,
@@ -130,7 +132,7 @@ namespace vision
 		float MaxProjectedDistance;
 		float MaxDistanceForMergeNode1;
 		float MaxDistanceForMergeNode2;
-		
+		int tmp  [ H ][ W ];
 	  
 		  FindNodes(){
 		      m_NodeBuffer  = new Node_Buffer;
@@ -138,8 +140,6 @@ namespace vision
 		      m_LinearGraph_Buffer  = new LinearGraph_Buffer;
 		      m_TransBuffer = new Trans_Buffer;
 		      init();
-// 		      H = params.camera.height->get();
-//                       W = params.camera.width->get();
 		      
 		      for(int i=0; i<20; ++i){
 			      float r =  rand() *255; 
@@ -172,11 +172,11 @@ namespace vision
 
 		
 		
-		void findNodes( /* in_out */ int ( & matrix )[ H ][ W ], /* out_temp */ int ( & tmp )[ H ][ W ] /* OUT Node_Buffer * m_NodeBuffer, */ );
+		void findNodes( /* in_out */ int ( & matrix )[ H ][ W ]/* OUT Node_Buffer * m_NodeBuffer, */ );
 		void ConnectTouchingNodes ( /* in */ const  int ( & matrix )[ H ][ W ] /* IN_OUT Node_Buffer * m_NodeBuffer, */ );
 		void FindMoreNodes ( /* in */ const int ( & matrix )[ H ][ W ] /* IN_OUT Node_Buffer * m_NodeBuffer, */ );
-	        void FindCloseNodes ( /* in */ const std::vector<float > &weightedWhiteValues/* IN const Trans_Buffer * m_TransBuffer, */ /* IN_OUT Node_Buffer * m_NodeBuffer, */ );
-		void ConnectCloseNodes ( /* in */ const std::vector<float > &weightedWhiteValues/* IN const Trans_Buffer * m_TransBuffer, */ /* IN_OUT Node_Buffer * m_NodeBuffer, */ );
+	        void FindCloseNodes ( /* in */ const float ( & weightedWhiteValues )[ H ][ W ]/* IN const Trans_Buffer * m_TransBuffer, */ /* IN_OUT Node_Buffer * m_NodeBuffer, */ );
+		void ConnectCloseNodes ( /* in */ const float ( & weightedWhiteValues )[ H ][ W ]/* IN const Trans_Buffer * m_TransBuffer, */ /* IN_OUT Node_Buffer * m_NodeBuffer, */ );
 		void SmoothNodes ( /* IN_OUT Node_Buffer * m_NodeBuffer, */ );
 		void DeleteNodes ( /* IN const Trans_Buffer * m_TransBuffer, */ /* IN_OUT Node_Buffer * m_NodeBuffer*/);
 		void  InsertCrossPoints( /* IN_OUT Node_Buffer * m_NodeBuffer, */ );
@@ -204,8 +204,8 @@ namespace vision
 	    int distance_nodes ( /* IN const Node_Buffer * m_NodeBuffer, */ /* in */ const int i, /* in */ const int j );
 	    float f_distance_nodes( /* IN const Node_Buffer * m_NodeBuffer, */ /* in */ const int i, /* in */ const int j ,Node_Buffer * nodeBuffer);
 	    int closes_loop ( /* IN const Node_Buffer * m_NodeBuffer, */ /* in */ const int i, /* in */ const int j );
-	    int black_line_value ( /* in */ const std::vector<float > &weightedWhiteValues, /* IN const Node_Buffer * m_NodeBuffer, */ /* in */ const int i, /* in */ const int j );
-	    void  update_close_nodes( /* in */ const std::vector<float > &weightedWhiteValues, /* IN const Trans_Buffer * m_TransBuffer, */ /* IN_OUT Node_Buffer * m_NodeBuffer, */ /* in */ const int i );
+	    int black_line_value ( /* in */ const float ( & weightedWhiteValues )[ H ][ W ], /* IN const Node_Buffer * m_NodeBuffer, */ /* in */ const int i, /* in */ const int j );
+	    void  update_close_nodes( /* in */ const float ( & weightedWhiteValues )[ H ][ W ], /* IN const Trans_Buffer * m_TransBuffer, */ /* IN_OUT Node_Buffer * m_NodeBuffer, */ /* in */ const int i );
 	    bool intersect( /* IN const Node_Buffer * m_NodeBuffer, */ /* in */ const int a, /* in */ const int b, /* in */ const int c, /* in */ const int d, /* out */ float * x, /* out */ float * y );
 	    void PrintNodeBuffer (string filename, Node_Buffer * nodeBuffer);
 	    void PrintReacherableComp (string filename);

@@ -7,10 +7,6 @@ using namespace boost::timer;
 
 Vision::Vision() 
 {
-    W = params.camera.width->get();
-    H = params.camera.height->get();
-    siX = params.camera.widthUnDistortion->get();
-    siY = params.camera.heightUnDistortion->get();
     
     onInit();
     drawField();

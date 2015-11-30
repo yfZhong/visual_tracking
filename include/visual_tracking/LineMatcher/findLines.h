@@ -47,7 +47,14 @@ namespace vision
 	  	FindLines();
 		~FindLines();
 		
-		int H, W, siX, siY;
+		enum{
+		        H = ORG_IMAGE_HEIGHT,
+			W = ORG_IMAGE_WIDTH,
+			siX = UNDISTOTED_IMAGE_WIDTH, 
+			siY = UNDISTOTED_IMAGE_HEIGHT,
+			
+		};
+		
 		
 		float DIAGONAL_ANGLE_RNAGE ;
 		 // * Line Structure * //
@@ -62,17 +69,19 @@ namespace vision
 		float MeasConf;
 		
 		
-	        int *H_data ; 
-		int *V_data ; 
-		int *diagonal_data45; 
-		int *diagonal_data135 ; 
+// 		int H_data  [ H ][ W ];
+// 		int V_data  [ H ][ W ];
+// 		int diagonal_data45  [ H ][ W ];
+// 		int diagonal_data135  [ H ][ W ];
+		
 		
 		void findSkeletons(FrameGrabber & CamFrm);
-		void applyLineFilter(/*in*/cv:: Mat Brightness_Channel,/*out*/std::vector< float > & weightedWhiteValues);
-		void RetrieveSkeleton (/* in */cv:: Mat &fieldConvectHull, /* in */ std::vector<float > &  matrix , /* out */ std::vector<cv::Point> &detectedPoins);
+// 		void applyLineFilter(/*in*/cv:: Mat Brightness_Channel,/*out*/std::vector< float > & weightedWhiteValues);
+		void applyLineFilter(/*in*/cv:: Mat Brightness_Channel,/*out*/float ( & weightedWhiteValues )[ H ][ W ]  );
+		void RetrieveSkeleton (/* in */cv:: Mat &fieldConvectHull, /* in */ const float ( & weightedWhiteValues )[ H ][ W ]  , /* out */ std::vector<cv::Point> &detectedPoins);
 		void removeObstacleBoarder (/* in */ vector< vector <cv::Point > > ObstacleContours  ,/* in_out */ std::vector<pair<cv::Point, int> > & _detectedPoinsWithType );
 		
-		void regionGlow(std::vector<float > &  matrix, Mat & visited, cv:: Mat & _fieldConvexHull, std::vector<pair<cv::Point, int> > & _detectedPoinsWithType );
+		void regionGlow(const float ( & matrix )[ H ][ W ] , Mat & visited, cv:: Mat & _fieldConvexHull, std::vector<pair<cv::Point, int> > & _detectedPoinsWithType );
 		
 		Mat visited ;
 		std::queue<Point> neighbors;
@@ -82,7 +91,7 @@ namespace vision
 		
 		
 		// ****************************************************************************** //
-                void Smooth ( /* in_out */ std::vector<float > & matrix );
+                void Smooth ( /* in_out */ float ( & matrix )[ H ][ W ]  );
 	
 		void findLines(FrameGrabber & CamFrm);
 		void findhoughLines(std::vector<cv::Point> & undistortedPoints);

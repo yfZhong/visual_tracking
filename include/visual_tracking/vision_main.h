@@ -81,6 +81,14 @@ namespace vision
 			/*! \fn virtual void onInit();
 			*/
 			virtual void onInit();
+			
+			enum{
+			    H = ORG_IMAGE_HEIGHT,
+			    W = ORG_IMAGE_WIDTH,
+			    siX = UNDISTOTED_IMAGE_WIDTH, 
+			    siY = UNDISTOTED_IMAGE_HEIGHT,
+			
+		        };
 
 			/*!  \brief Executes the the image processing algorithms for each camera frame.
 			*    \param img  pointer to the raw image.
@@ -140,7 +148,7 @@ namespace vision
 			ros::Publisher fieldLineMarker_pub;
 			
 			  //Constants
-			int H, W, siX, siY;
+// 			int H, W, siX, siY;
 			
 			sensor_msgs::Image::ConstPtr img;
 
