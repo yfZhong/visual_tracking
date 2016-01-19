@@ -15,27 +15,37 @@ vision:
     heightUnDistortion: 1177
     useBagfile: 1
     widthUnDistortion: 1620
+  dataAssociation:
+    MaxAngDiff: 61
+    MaxErrorForInlier: 60
+    _MaxAngleChange: 25
+    _MinCompLengthForModelError: 40
   debug:
     publishTime: 0
     showAssociateLines: 0
+    showBoundingRects: 1
     showCamPose: 0
     showCorrespondence: 1
     showFieldHull: 1
-    showFieldModel: 1
+    showFieldModel: 0
     showHoughLines: 0
     showLineInfo: 0
     showMarkers: 1
     showMergedLines: 0
+    showModelLines: 1
     showNodeGraph: 1
     showRobPose: 1
     showSkeletonPixels: 1
+    showTangentLine: 0
+    useKalmanFilter: 1
+    useMotionOdom: 1
   field:
     BonnField: 1
     MaxDistanceFromBottomOfImage: 200
     maxContourCount: 3
     minArea: 600
   fieldhsv:
-    h0: 41
+    h0: 45
     h1: 78
     s0: 70
     s1: 219
@@ -61,53 +71,78 @@ vision:
     v0: 120
     v1: 255
   graphNode:
-    AngleToMerge: 20
-    DistanceCompToMerge: 400
-    LineWidth: 23
-    MaxDist: 225
-    MaxDistanceForMergeNode1: 300
-    MaxDistanceForMergeNode2: 100
-    MaxLineSegDistance: 50
+    AngleToMerge: 0
+    DistanceCompToMerge: 0
+    LineWidth: 6
+    MaxDist: 0
+    MaxDistanceForMergeNode1: 50
+    MaxDistanceForMergeNode2: 50
+    MaxLineSegDistance: 30
     MaxLineSegDistanceForJoint: 400
     MaxProjectedDistance: 15
-    MergeJointDist: 100
+    MergeJointDist: 0
     MinCmpLineLength: 0
     MinDist: 1000
-    MinDistForMerge: 90
-    Min_adj: 1000
-    SamplePointDist: 5
-    SmallAngle: 60
+    MinDistForMerge: 30
+    Min_adj: 5
+    SamplePointDist: 3
+    SmallAngle: 15
+    _AvgAngleDiff: 6
+    _MaxAngleDiff: 5
+    _MaxAvgProjectedDistance: 20
+    _MaxCloseNum: 4
+    _MaxDistanceForConnect: 7
+    _MaxDistanceForMerge: 90
+    _MaxLineSegDistance: 30
+    _MaxProjectedDistance: 11
+    _MinAngle: 42
+    _MinAngleForSameComp: 165
+    _MinCmpLineLength: 40
+    _Min_adj: 100
+    _NeighborRadius: 15
+  hillclimbing:
+    ErrorThreshold1: 20
+    ErrorThreshold2: 50
+    HeadingOffset: 0
+    MaxHypothesisNum: 20
+    MaxIterationNum: 5
+    MovingStepCoefficient: 0.1
   icp:
-    AvgDistThresholdForConf: 40
-    HeadingOffset: 3.14159
-    IcpInlierDistThreshold: 2000
-    InlierNumThresholdForConf: 50
-    KFOrientationCov: 100
-    KFPositionCov: 100
-    SamplePointDist_WorldCord: 0.1
+    AvgDistThresholdForConf: 3
+    HeadingOffset: 3.1416
+    IcpInlierDistThreshold: 4912
+    InlierNumThresholdForConf: 30
+    KFOrientationCov: 10000
+    KFPositionCov: 10000
+    SamplePointDist_WorldCord: 0.2
+  kalmanFilter:
+    ErrorThreshod: 5
+    KFOrientationCov: 100000
+    KFPositionCov: 100000
   line:
     AngleToMerge: 15
-    AngleToMergeImg: 7
+    AngleToMergeImg: 0
     Div1: 0.5
-    Div2: 0.8
-    HoughLineMinLineLength: 35
+    Div2: 0.7
+    HoughLineMinLineLength: 13
     HoughLineRho: 7
     HoughLineTheta: 6
-    HoughLineVoteThreshold: 15
-    HoughLinemaxLineGap: 50
-    LocalOptimalRange: 0
+    HoughLineVoteThreshold: 14
+    HoughLinemaxLineGap: 40
+    LocalOptimalRange: 10
+    MaxNeighborDist: 3
     MaxPointLineDistance: 100
     MeasAreaThreshod: 60000
     MeasLineLengthThreshod: 200
     MeasLineMaxAngDifThreshod: 60
     MeasLineNumThreshod: 4
     MinBrightnessValue: 90
-    MinLineLength: 100
+    MinLineLength: 80
     MinLineSegDistance: 0.8
-    MinLineSegDistanceImg: 100
+    MinLineSegDistanceImg: 50
     MinProjectedDistance: 0.35
-    MinProjectedDistanceImg: 12
-    MinSkeletonValue: 60
+    MinProjectedDistanceImg: 23
+    MinSkeletonValue: 35
     ObstacleLineDistance: -10
   linehsv:
     h0: 0
@@ -117,9 +152,9 @@ vision:
     v0: 0
     v1: 254
   location:
-    x: -1.1
-    y: 0.2561
-    z: 0.5375
+    x: -1.4
+    y: 6.70552e-09
+    z: 0.58
   obstacle:
     minArea: 500
   obstaclehsv:
@@ -130,9 +165,9 @@ vision:
     v0: 0
     v1: 100
   orientation:
-    x: -0.000234885
-    y: -0.0112907
-    z: -0.244743
+    x: 0
+    y: 0
+    z: -0.2
   particleFilter:
     HeadingOffset: 0
     MinSumOfLineLengthOnImage: 100
@@ -140,3 +175,7 @@ vision:
     RandomSamplePct: 0.2
   projection:
     timeToShift: 0.150
+  square:
+    MaxNeighborDist: 5
+    Max_K: 6
+    MinPointNum: 1

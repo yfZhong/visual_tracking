@@ -77,6 +77,17 @@ public:
 
 };
 
+class SquareC
+{
+      public:
+	 config_server::Parameter<int> *MaxNeighborDist;
+	 config_server::Parameter<int> *Max_K;
+	 config_server::Parameter<int> *MinPointNum;
+  
+  
+};
+
+
 class FieldC
 {
 public:
@@ -103,7 +114,25 @@ public:
 	config_server::Parameter<float> *MaxProjectedDistance;
 	config_server::Parameter<float> * MaxDistanceForMergeNode1;
 	config_server::Parameter<float> * MaxDistanceForMergeNode2;
-	config_server::Parameter<int> *SamplePointDist;
+	config_server::Parameter<float> *SamplePointDist;
+	config_server::Parameter<float> *_NeighborRadius;
+	config_server::Parameter<float> *_MaxDistanceForConnect;
+	
+	config_server::Parameter<int> *_MaxCloseNum;
+	config_server::Parameter<int> *_MinAngle;
+	config_server::Parameter<int> *_Min_adj;
+	config_server::Parameter<int> *_MinAngleForSameComp;
+	config_server::Parameter<float> *_MinCmpLineLength;
+	config_server::Parameter<float> *_MaxLineSegDistance;
+	config_server::Parameter<float> *_MaxProjectedDistance;
+	config_server::Parameter<int> *_MaxAngleDiff;
+	
+	config_server::Parameter<int> *_AvgAngleDiff;
+	config_server::Parameter<float> *	_MaxAvgProjectedDistance;
+	config_server::Parameter<float> *	_MaxDistanceForMerge;
+	
+
+	
 
 };
 
@@ -152,6 +181,10 @@ class debugC
 public:
 	config_server::Parameter<bool> *showFieldHull;
 	config_server::Parameter<bool> *showSkeletonPixels;
+	config_server::Parameter<bool> *showNodeGraph;
+	config_server::Parameter<bool> *showTangentLine;
+	config_server::Parameter<bool> *showBoundingRects;
+	config_server::Parameter<bool> *showModelLines;
 	config_server::Parameter<bool> *showHoughLines;
 	config_server::Parameter<bool> *showMergedLines;
         config_server::Parameter<bool> *showAssociateLines;
@@ -161,7 +194,8 @@ public:
 	config_server::Parameter<bool> *showLineInfo;
 	config_server::Parameter<bool> *showFieldModel;
 	config_server::Parameter<bool> *showCorrespondence;
-	config_server::Parameter<bool> *showNodeGraph;
+	config_server::Parameter<bool> *useKalmanFilter;
+	config_server::Parameter<bool> *useMotionOdom;
 };
 
 // class CameraCalibratorC
@@ -222,8 +256,7 @@ class IcpC
 public:
 	config_server::Parameter<int> *IcpInlierDistThreshold;
 	config_server::Parameter<float> *SamplePointDist_WorldCord;
-	config_server::Parameter<float> *KFPositionCov;
-	config_server::Parameter<float> *KFOrientationCov;
+
 	config_server::Parameter<float> *AvgDistThresholdForConf;
 	config_server::Parameter<float> *InlierNumThresholdForConf;
 	config_server::Parameter<float> *HeadingOffset;
@@ -236,6 +269,44 @@ class projectionC
 public:
         config_server::Parameter<float> *timeToShift;
 };
+
+class DataAssociationC
+{
+public:
+ 
+	config_server::Parameter<int> *MaxAngDiff;
+	config_server::Parameter<float> *MaxErrorForInlier;
+	config_server::Parameter<float> *_MinCompLengthForModelError;
+	config_server::Parameter<int> *_MaxAngleChange;
+
+	
+};
+
+
+
+class HillClimbingC
+{
+public:
+        config_server::Parameter<int> *HeadingOffset;
+	config_server::Parameter<float> *MovingStepCoefficient;
+	config_server::Parameter<int> *MaxIterationNum;
+	config_server::Parameter<float> *ErrorThreshold1;
+	config_server::Parameter<float> *ErrorThreshold2;
+	config_server::Parameter<int> *MaxHypothesisNum;
+	
+
+};
+
+
+class KalmanFilterC
+{
+public:
+ 
+	config_server::Parameter<int> *ErrorThreshod;
+	config_server::Parameter<int> *KFPositionCov;
+	config_server::Parameter<int> *KFOrientationCov;
+};
+
 
 
 class ParticleFilterC
@@ -263,9 +334,13 @@ public:
 	calibC calib;
 	debugC debug;
 	projectionC projection;
-	ParticleFilterC particleFilter;
+	DataAssociationC dataAssociation;
+	HillClimbingC hillclimbing;
+	KalmanFilterC kalmanFilter;
 	IcpC icp;
+	ParticleFilterC particleFilter;
 	GraphNodeC graphNode;
+	SquareC square;
 	void Init()
 	{
 	  
@@ -345,10 +420,13 @@ public:
                 line.MinLineLength = new config_server::Parameter<int>("/vision/line/MinLineLength", 0, 10, 1000, 100);
 		
 		
-// 		 graphNode.Max_Conn = new config_server::Parameter<int>("/vision/graphNode/Max_Conn", 0, 1, 8, 4);
-// 		 graphNode.Max_Close = new config_server::Parameter<int>("/vision/graphNode/Max_Close", 0, 1, 128, 64);
-// 		 graphNode.Max_Transition = new config_server::Parameter<int>("/vision/graphNode/Max_Transition", 0, 1, 128, 32);
-// 		 graphNode.Max_Cos = new config_server::Parameter<int>("/vision/graphNode/Max_Cos", 0, 1, 1024, 512);
+		square.MaxNeighborDist = new config_server::Parameter<int>("/vision/square/MaxNeighborDist", 2, 1, 10, 5);
+		square.Max_K = new config_server::Parameter<int>("/vision/square/Max_K", 2, 1, 10, 6);
+		square.MinPointNum = new config_server::Parameter<int>("/vision/square/MinPointNum", 0, 1, 100, 3);
+		
+
+		
+		
 		graphNode.LineWidth = new config_server::Parameter<int>("/vision/graphNode/LineWidth", 0, 1, 100, 15);
 		graphNode.SmallAngle = new config_server::Parameter<int>("/vision/graphNode/SmallAngle", 0, 1, 100, 60);
 		
@@ -356,15 +434,47 @@ public:
 		graphNode.MinDistForMerge = new config_server::Parameter<int>("/vision/graphNode/MinDistForMerge", 0, 10, 40000, 200);
 		graphNode.MergeJointDist = new config_server::Parameter<int>("/vision/graphNode/MergeJointDist", 0, 10, 10000, 1800);
 		graphNode.MinCmpLineLength = new config_server::Parameter<int>("/vision/graphNode/MinCmpLineLength", 0, 10, 40000, 400);
-		graphNode.Min_adj = new config_server::Parameter<int>("/vision/graphNode/Min_adj", 0, 100, 1000000, 100000);
+		graphNode.Min_adj = new config_server::Parameter<int>("/vision/graphNode/Min_adj", 5, 10, 10000, 100);
 		graphNode.DistanceCompToMerge = new config_server::Parameter<int>("/vision/graphNode/DistanceCompToMerge", 0, 1, 10000, 25);
 		graphNode.AngleToMerge = new config_server::Parameter<int>("/vision/graphNode/AngleToMerge", 0, 5, 90, 15);
 		graphNode.MaxLineSegDistance = new config_server::Parameter<float>("/vision/graphNode/MaxLineSegDistance", 0, 10, 10000, 100);
 		graphNode.MaxProjectedDistance = new config_server::Parameter<float>("/vision/graphNode/MaxProjectedDistance", 0, 1, 1000, 25);
 		graphNode.MaxDistanceForMergeNode1 = new config_server::Parameter<float>("/vision/graphNode/MaxDistanceForMergeNode1", 0, 10, 10000, 64);
 		graphNode.MaxDistanceForMergeNode2 = new config_server::Parameter<float>("/vision/graphNode/MaxDistanceForMergeNode2", 0, 10, 10000, 64);
+		graphNode.SamplePointDist = new config_server::Parameter<float>("/vision/graphNode/SamplePointDist", 0, 1, 100, 5);
 		
-		graphNode.SamplePointDist = new config_server::Parameter<int>("/vision/graphNode/SamplePointDist", 0, 1, 100, 5);
+		graphNode._MaxCloseNum= new config_server::Parameter<int>("/vision/graphNode/_MaxCloseNum", 1, 1,30, 10);
+		graphNode._NeighborRadius = new config_server::Parameter<float>("/vision/graphNode/_NeighborRadius", 3, 1,30, 15);
+		graphNode._MinAngle = new config_server::Parameter<int>("/vision/graphNode/_MinAngle", 10, 1,90, 45);
+		graphNode._Min_adj = new config_server::Parameter<int>("/vision/graphNode/_Min_adj", 1, 10, 10000, 100);
+		graphNode._MinAngleForSameComp = new config_server::Parameter<int>("/vision/graphNode/_MinAngleForSameComp", 100, 1, 180, 165);
+		graphNode._MaxDistanceForConnect = new config_server::Parameter<float>("/vision/graphNode/_MaxDistanceForConnect", 0, 1, 100, 40);
+		graphNode._MinCmpLineLength = new config_server::Parameter<float>("/vision/graphNode/_MinCmpLineLength", 0, 1, 400, 20);
+		graphNode._MaxLineSegDistance = new config_server::Parameter<float>("/vision/graphNode/_MaxLineSegDistance", 0, 10, 1000, 100);
+		graphNode._MaxProjectedDistance = new config_server::Parameter<float>("/vision/graphNode/_MaxProjectedDistance", 0, 1, 1000, 25);
+		graphNode._MaxAngleDiff = new config_server::Parameter<int>("/vision/graphNode/_MaxAngleDiff", 0, 5, 90, 15);
+		graphNode._AvgAngleDiff = new config_server::Parameter<int>("/vision/graphNode/_AvgAngleDiff", 0, 5, 90, 15);
+		graphNode._MaxAvgProjectedDistance = new config_server::Parameter<float>("/vision/graphNode/_MaxAvgProjectedDistance", 0, 1, 1000, 25);
+		graphNode._MaxDistanceForMerge = new config_server::Parameter<float>("/vision/graphNode/_MaxDistanceForMerge", 0, 1, 4000, 80);
+		
+
+		dataAssociation.MaxAngDiff = new config_server::Parameter<int>("/vision/dataAssociation/MaxAngDiff", 0, 5, 90, 45);
+		dataAssociation.MaxErrorForInlier = new config_server::Parameter<float>("/vision/dataAssociation/MaxErrorForInlier", 0, 10, 10000, 100);
+		dataAssociation._MinCompLengthForModelError = new config_server::Parameter<float>("/vision/dataAssociation/_MinCompLengthForModelError", 0, 5, 1000, 100);
+		dataAssociation._MaxAngleChange = new config_server::Parameter<int>("/vision/dataAssociation/_MaxAngleChange", 0, 5, 90, 10);
+		
+		
+		hillclimbing.HeadingOffset = new config_server::Parameter<int>("/vision/hillclimbing/HeadingOffset", 0, 1, 1, 0);
+		hillclimbing.MovingStepCoefficient= new config_server::Parameter<float>("/vision/hillclimbing/MovingStepCoefficient", 0.0001, 0.1, 2, 1);
+		hillclimbing.MaxIterationNum = new config_server::Parameter<int>("/vision/hillclimbing/MaxIterationNum", 0, 1, 20, 5);
+		hillclimbing.ErrorThreshold1 = new config_server::Parameter<float>("/vision/hillclimbing/ErrorThreshold1", 1, 1, 200, 5);
+		hillclimbing.ErrorThreshold2 = new config_server::Parameter<float>("/vision/hillclimbing/ErrorThreshold2", hillclimbing.ErrorThreshold1->get(), 1, 300, 50);
+		hillclimbing.MaxHypothesisNum = new config_server::Parameter<int>("/vision/hillclimbing/MaxHypothesisNum", 1, 1, 200, 20);
+		
+		
+		
+
+		
 		
 		goal.lineVoteDouble = new config_server::Parameter<int>("/vision/goal/VoteDouble", 0, 1,100 , 40);
 		goal.erode = new config_server::Parameter<int>("/vision/goal/erode", 0,1, 20, 0);
@@ -398,6 +508,12 @@ public:
 
 	        debug.showFieldHull= new config_server::Parameter<bool>("/vision/debug/showFieldHull", true);
 		debug.showSkeletonPixels= new config_server::Parameter<bool>("/vision/debug/showSkeletonPixels", true);
+		debug.showBoundingRects= new config_server::Parameter<bool>("/vision/debug/showBoundingRects", true);
+		debug.showNodeGraph= new config_server::Parameter<bool>("/vision/debug/showNodeGraph", true);
+		debug.showTangentLine= new config_server::Parameter<bool>("/vision/debug/showTangentLine", true);
+		debug.showModelLines= new config_server::Parameter<bool>("/vision/debug/showModelLines", true);
+		
+		
 		debug.showHoughLines= new config_server::Parameter<bool>("/vision/debug/showHoughLines", true);
 		debug.showMergedLines= new config_server::Parameter<bool>("/vision/debug/showMergedLines", true);
 		debug.showAssociateLines= new config_server::Parameter<bool>("/vision/debug/showAssociateLines", true);
@@ -406,7 +522,11 @@ public:
 		debug.showRobPose= new config_server::Parameter<bool>("/vision/debug/showRobPose", true);
 		debug.publishTime= new config_server::Parameter<bool>("/vision/debug/publishTime", true);
 		debug.showCorrespondence= new config_server::Parameter<bool>("/vision/debug/showCorrespondence", true);
-		debug.showNodeGraph= new config_server::Parameter<bool>("/vision/debug/showNodeGraph", true);
+		debug.useKalmanFilter= new config_server::Parameter<bool>("/vision/debug/useKalmanFilter", true);
+		debug.useMotionOdom= new config_server::Parameter<bool>("/vision/debug/useMotionOdom", false);
+		
+		
+		
 		
 		
 		
@@ -414,6 +534,11 @@ public:
 		
 		
 		projection.timeToShift = new config_server::Parameter<float>("/vision/projection/timeToShift", 0, 0.005, 3, 0.20);
+		
+		kalmanFilter.ErrorThreshod = new config_server::Parameter<int>("/vision/kalmanFilter/ErrorThreshod", 1, 1, 100, 5);
+		kalmanFilter.KFPositionCov = new config_server::Parameter<int>("/vision/kalmanFilter/KFPositionCov", 0, 1, 100000000, 1000000);
+		kalmanFilter.KFOrientationCov = new config_server::Parameter<int>("/vision/kalmanFilter/KFOrientationCov", 0, 1, 100000000, 1000000);
+		
 		
 		particleFilter.ParticleNum = new config_server::Parameter<int>("/vision/particleFilter/ParticleNum", 0, 10, 5000, 200);
 		particleFilter.RandomSamplePct = new config_server::Parameter<float>("/vision/particleFilter/RandomSamplePct", 0, 0.02, 1, 0.01);
@@ -423,8 +548,7 @@ public:
 		
 		icp.IcpInlierDistThreshold  = new config_server::Parameter<int>("/vision/icp/IcpInlierDistThreshold", 0, 10, 60000, 2000);
 		icp.SamplePointDist_WorldCord = new config_server::Parameter<float>("/vision/icp/SamplePointDist_WorldCord", 0, 0.1, 10.0, 0.1);
-		icp.KFPositionCov = new config_server::Parameter<float>("/vision/icp/KFPositionCov", 0, 1, 10000.0, 100);
-		icp.KFOrientationCov = new config_server::Parameter<float>("/vision/icp/KFOrientationCov", 0, 1, 10000.0, 100);
+		
 		icp.AvgDistThresholdForConf = new config_server::Parameter<float>("/vision/icp/AvgDistThresholdForConf", 1, 1, 400, 40);
 		icp.InlierNumThresholdForConf = new config_server::Parameter<float>("/vision/icp/InlierNumThresholdForConf", 1, 1, 4000, 50);
 		icp.HeadingOffset = new config_server::Parameter<float>("/vision/icp/HeadingOffset", 0, 0.1,2*M_PI, M_PI);

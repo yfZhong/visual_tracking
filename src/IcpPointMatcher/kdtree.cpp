@@ -106,6 +106,7 @@ namespace kdtree {
     }
   }
   
+  
   // destructor
   KDTree::~KDTree() {
     delete root;

@@ -59,10 +59,10 @@ void SingleParticle::cameraPoseInit(){
 	      
 
 	    for (unsigned int i = 0; i<model.pointMatcher.inlierIdx.size(); ++i ){
-		worldPts.push_back(cv::Point3f(model.forw_Proj.ModelPointsInWorldCord[model.pointMatcher.inlierIdx[i]].x,
-					      model.forw_Proj.ModelPointsInWorldCord[model.pointMatcher.inlierIdx[i]].y,
-					      model.forw_Proj.ModelPointsInWorldCord[model.pointMatcher.inlierIdx[i]].z));
-	      
+// 		worldPts.push_back(cv::Point3f(model.forw_Proj.ModelPointsInWorldCord[model.pointMatcher.inlierIdx[i]].x,
+// 					      model.forw_Proj.ModelPointsInWorldCord[model.pointMatcher.inlierIdx[i]].y,
+// 					      model.forw_Proj.ModelPointsInWorldCord[model.pointMatcher.inlierIdx[i]].z));
+// 	      
 	    }
             
 // 	    model.poseCalculator.calculatePose(imgPts, worldPts, cameraPose);

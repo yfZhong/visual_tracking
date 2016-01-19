@@ -50,10 +50,13 @@ namespace vision
 	
 	~M_KalmanFilter(){};
 	
-	void measurementSub( const  geometry_msgs::PoseStamped& msg , float conf);
+	void correction(const geometry_msgs::PoseStamped& msg , float conf);
 	void prediction();
 	void setCurTime(ros::Time t);
+	void getMeasurementCov(double (&cov)[6]);
 	void robotPoseInit();
+	void mainLoop(const geometry_msgs::PoseStamped& msg , float conf);
+	void getRobotPose(geometry_msgs::PoseStamped & _robotPoseS ){_robotPoseS = robotPoseS; }
 	
 // 	void updateTransform();
 	
@@ -62,11 +65,15 @@ namespace vision
 	
 	Eigen:: Matrix<float, 6, 6> estimate_cov;
 	Eigen:: Matrix<float, 6, 1> estimate_pose;
-	
-	Eigen:: Matrix<float, 6, 1> predict_pose;
-	
-
 	geometry_msgs::PoseWithCovarianceStamped estimate_pose_cov;
+	Eigen:: Matrix<float, 6, 1> predict_pose;
+	double speed_x, speed_y, speed_yaw;
+	
+	bool useMotionOdom;
+	
+	geometry_msgs::PoseStamped  robotPoseS;
+	
+	
 	
 
 	//by Hafez
@@ -85,7 +92,7 @@ namespace vision
 	ros::Subscriber odom_sub;
 	Point3d lastOdom;
 	Point3d globalPos;
-	void dead_reckoning_callback(const gait_msgs::GaitOdomConstPtr & msg);
+	void prediction2(const gait_msgs::GaitOdomConstPtr & msg);
 	cv::Point2f RotateAroundPoint(cv::Point2f pQuery, double alpha);
         void RotateAroundPoint(Point2d pQuery, double alpha, Point2d &res);
         void RotateCoordinateAxis(double alpha, Point2d p, Point2d &res);
@@ -96,6 +103,11 @@ namespace vision
 	ros::Time cur_time_stamp;
 	ros::Time pre_meas_time; 
 	int init;
+	float measurementCov[6];
+	
+	int unexpectPose_n;
+	
+	vector<gait_msgs::GaitOdomConstPtr> msg_array;
 	
 // 	double sensorTimeout_;
 	

@@ -26,7 +26,7 @@ Street, Fifth Floor, Boston, MA 02110-1301, USA
 using namespace std;
 
 Icp::Icp (double *M,const int32_t M_num,const int32_t dim) :
-  dim(dim), max_iter(200), min_delta(1e-1) {//min_delta(1e-2)
+  dim(dim), max_iter(1), min_delta(1e-1) {//min_delta(1e-2)
     //--------- by Yongfeng--------//
    inlierNum = 0;
    //--------- by Yongfeng--------//
@@ -66,12 +66,14 @@ void Icp::fit (double *T,const int32_t T_num,Matrix &R,Matrix &t,const double in
   // make sure we have a model tree
   if (!M_tree) {
     cout << "ERROR: No model available." << endl;
+    inlierNum = 0;
     return;
   }
   
   // check for minimum number of points
   if (T_num<5) {
     cout << "ERROR: Icp works only with at least 5 template points" << endl;
+    inlierNum = 0;
     return;
   }
   
@@ -93,12 +95,14 @@ void Icp::fitIterate(double *T,const int32_t T_num,Matrix &R,Matrix &t,const std
   
   // check if we have at least 5 active points
   if (active.size()<5)
+  { inlierNum = 0;
     return;
+  }
   
   // iterate until convergence
-  int iter_num=0;
+//   int iter_num=0;
   for (int32_t iter=0; iter<max_iter; iter++){
-    iter_num++;
+//     iter_num++;
     if (fitStep(T,T_num,R,t,active)<min_delta)
       break;
     

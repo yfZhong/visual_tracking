@@ -1,5 +1,5 @@
 // by Yongfeng
-// given the correspondence between image points and world points (under "world" frame), calculte the pose of the camera
+
 #ifndef CALCULATE_POSE_H
 #define  CALCULATE_POSE_H
 
@@ -21,9 +21,9 @@
 using namespace std;
 using namespace  vision;
 
-/*
+
 namespace vision
-      {*/   
+      {   
 	
 	class PoseCalculator
 	{
@@ -42,6 +42,6 @@ namespace vision
 
 
 
-// }
+};
 
 #endif

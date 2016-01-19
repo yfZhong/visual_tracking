@@ -46,16 +46,12 @@ public:
 	void CreateUndistort(const Mat &rawImg,Mat &res);
 	void CreateUndistortFull(const Mat &rawImg,Mat &res);
 	bool UndistortP(const vector<Point> contour, vector<Point> &resCountour);
+	bool UndistortP( Point pIn,Point &pOut);
 
 	bool DistortP(const vector<Point> contour,
 			vector<Point> &resCountour);
 	bool DistortPFull(const vector<Point> contour,
 			vector<Point> &resCountour);
-	
-        int W , H , siX , siY , offsetx , offsety ;
-	double fx , fy , cx , cy ;
-	
-	
 };
 
 extern DistortionModel distortionModel;

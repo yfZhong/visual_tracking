@@ -18,7 +18,8 @@
 
 #include <tf/tf.h>
 #include <tf/transform_datatypes.h>
-
+#include <visual_tracking/Parameters/globaldefinitions.h>
+#include <../../src/nimbro_robotcontrol/contrib/rbdl/source/addons/luamodel/lua-5.2.1/src/llimits.h>
 
 using namespace std;
 
@@ -64,15 +65,59 @@ namespace vision
 	    Line_w PerpendicularLineSegment( Vec3f mid, float len);
 	};
 	
-	
+// 	  struct NodeId{
+// 	       int id;
+// 	       int Neighbor1;
+// 	       int Neighbor2;
+// 	       int numOfNeighbor;
+// 	  };
+// 	   
 	
 	   struct LinearGraphComponent{
 		vector<int>  reachableNodeIds;
+		vector<Vec2i>  Points;
 		vector<Line>  Lines;
+		vector<Line>  UndistortedLines;
+		vector<float>  UndistortedNodeAngles; // ［-0.5*M_PI, 0.5*M_PI）
+		vector<Line>  TangentLines;
+		
 		float sumOfLength;
+		float sumOfLengthUndistorted;
+		float undistortedAngleAvg; // in  radian
+		float undistortedAngleChangeAvg;// in  degree
+		
 	   };
 	   typedef vector< LinearGraphComponent > LinearGraph_Buffer;
+	   
+	   
+	   struct ModelLineElement{
+	        int id;
+	        Line LongLine;
+		vector<Line>  UndistortedLines;
+		vector<Vec2i>  UndistortedPoints;
+		float sumOfLengthUndistorted;
+		float undistortedAngle;
+	   };
+	   typedef vector< ModelLineElement > ModelLine_Buffer;
+	   
 	
+	   
+	    struct M_rect{
+		cv::Rect rect;
+		double area;
+		int center_x, center_y;
+		int avg_x, avg_y;
+		int    undistorted_x_pos;
+		int    undistorted_y_pos;
+		int num_points;
+	    };
+	    typedef vector< M_rect > Rectangle_Buffer;
+	   
+	   
+	   
+	   
+	   
+	   
 	
 	
 	
@@ -87,15 +132,19 @@ namespace vision
 	float TwoPointDistance( Vec2i p1, Vec2i p2);
 	float dot(Vec2f c1, Vec2f c2);
 	float getShortestDistance(Line line1, Line line2);
+	Vec2i getClosestPointOnLine(Vec2i &p, Line &line);
 // 	bool DiagonalAng( float ang1, float ang2);
 
 	float getKValue(Vec2f c1, Vec2f c2);
-	float getAngle(Vec2f c1, Vec2f c2);
+	float getAngle(Vec2f c1, Vec2f c2); //［-0.5*M_PI, 0.5*M_PI）
 	float getKValue(Vec2i c1, Vec2i c2);
 	float getAngle(Vec2i c1, Vec2i c2);
+	float getAngle2PI( Vec2i c1, Vec2i c2 );//［-M_PI, M_PI）
+	float AngleDiff2PI(float ang1, float ang2);//［-M_PI, M_PI）
+	float AngleAvg2PI(float ang1, float ang2);//［-M_PI, M_PI）
 	float getKValueFromAngle(float ang);
 	float AngDif(float ang1, float ang2);
-	
+	float AngAvg(float ang1, float ang2);
 	
 	
 	//methods for 3d point. Assume that the z value is 0
@@ -142,6 +191,11 @@ namespace vision
 	void SamplePointsOnLines(Vector<Line> lines, float dist, vector<cv::Point>  &PointsOnLines);
 	
 	bool intersect( Line a, Line b ,Vec2i& intersetP);
+	
+	
+	float getTwoRectClosestDist(M_rect a, M_rect b);
+	
+	
 	
       };
 

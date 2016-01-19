@@ -44,6 +44,7 @@
 
 using namespace std;
 using namespace cv;
+using namespace vision;
 
 namespace vision
 {        
@@ -53,6 +54,7 @@ namespace vision
       public:
 		
 	ForwardProjection();
+	
 	void onInit(ros::Time t );
 	void robotPoseInit();
 	void setRobotPose(geometry_msgs::Pose p);
@@ -70,6 +72,14 @@ namespace vision
 	void TfCamPose2RobotPose(geometry_msgs::PoseStamped &cameraPose, geometry_msgs::PoseStamped &robotPose);
 	void mainLoop();
 	
+	
+	void GetModelLineComps();
+	
+
+	ModelLine_Buffer  * m_ModelLine_Buffer;
+	
+	
+	
 	FieldInfo fieldInfo;
 	std::vector< Line_w > Field_Lines;
 	std::vector< Line > Field_Lines_Img;
@@ -78,35 +88,31 @@ namespace vision
         tf::Transform tf_Egorot2Cam;
 	float timeToshift;
 	
-	ros::Publisher points_pub_cam;
+// 	ros::Publisher points_pub_cam;
 	
 	std::vector<pair<tf::Vector3, int > > PointsInWorldCord;
 	std::vector<pair<tf::Vector3, int > > PointsInCamCord;
 
 	std::vector<cv::Point> ModelPointsInImg;
 	std::vector<pair<cv::Point, int > >ModelPointsInImgWithId;
-	std::vector<cv::Point3f> ModelPointsInWorldCord;
+// 	std::vector<cv::Point3f> ModelPointsInWorldCord;
 	
 	
 	
-	void robot_pose_estimate();
-	void broadcastTF();
-
+	~ForwardProjection(){    
+		m_ModelLine_Buffer->clear();
+		delete m_ModelLine_Buffer;
+	  
+	}
+		 
 	
       protected:
 	ros::NodeHandle node;
 	ros::Time cur_time_stamp;
 	
-// 	image_transport::Publisher image_pub_;
 	int seq;
-	int debug;
 
-// 	void seed_rand();
-	
-// 	cv::Matx33f cameraMatrix;
-//         cv::Mat  distCoeffs;
 	double fx , fy, cx, cy; 
-	
         int W, H, siX, siY, offsetx, offsety;
 	
 	float SamplePointDist_WorldCord;
@@ -116,7 +122,6 @@ namespace vision
 	tf::Vector3  translation_World2Cam;
 	tf::Matrix3x3  rotation_Cam2World;
 	tf::Vector3  translation_Cam2World;
-
 	
 	geometry_msgs::Pose rbPose;
     };

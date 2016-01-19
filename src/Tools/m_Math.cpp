@@ -25,9 +25,20 @@ Line::Line( int _id,  Vec2i  _s, Vec2i _e, int _nodeId_s, int _nodeId_e): id( _i
     conf = 1.0;
 }
 
+
+
+
+
+
+
+
 Vec2i Line::getMidPoint(){
   return Vec2i( (s[0] + e[0])/2 ,(s[1] + e[1])/2 );
 }
+
+
+
+
 
 Line Line::PerpendicularLineSegment( Vec2i mid, float len)
 {
@@ -181,6 +192,27 @@ float m_Math::Point2LineSegDistance(Vec2i p, Line line){
 
 }
 
+Vec2i m_Math::getClosestPointOnLine(Vec2i &p, Line &line){
+  Vec2i pclosest;
+  
+  if(isProjectedInsideLineSeg( p,line)){
+    GetProjectivePoint(  p,  line, pclosest);
+  }
+  else{
+      if(TwoPointDistance( p, line.s)> TwoPointDistance( p, line.e)){
+	pclosest = line.e;
+      }
+      else{
+	pclosest = line.s;
+      }
+  }
+  return pclosest;
+
+}
+
+
+
+
 float m_Math::TwoPointDistance( Vec2i p1, Vec2i p2){
 
   return sqrt(pow(p1[0]- p2[0],2) + pow(p1[1] - p2[1],2));
@@ -306,7 +338,7 @@ float m_Math::getKValue(Vec2f c1, Vec2f c2){
 float m_Math::getAngle(Vec2f c1, Vec2f c2){
   
       if((c2[0]-c1[0]) ==0){
-	  return -M_PI/2.0;
+	  return M_PI/2.0;
       }
       else{
           return atan(  (c2[1]-c1[1])/ (c2[0]-c1[0]) );
@@ -337,6 +369,25 @@ float m_Math::AngDif(float ang1, float ang2){//in:radian, out degree
  
 }
 
+ // in degree
+float m_Math::AngAvg(float ang1, float ang2){//in:radian, out degree
+      float dif;
+      dif = fabs(ang1-ang2);
+      if(dif > M_PI/2.){ dif =M_PI - dif; }
+      return dif/M_PI * 180.0 ;
+ 
+}
+
+
+
+
+// float m_Math::Ang1MinusAng2(float ang1, float ang2){//in:radian, out degree
+//       float dif;
+//       dif = (ang1-ang2);
+//       if(dif > M_PI/2.){ dif =M_PI - dif; }
+//       return dif/M_PI * 180.0 ;
+//  
+// }
 
 
 
@@ -532,6 +583,54 @@ float m_Math::getAngle(Vec3f c1, Vec3f c2){
       }
     
   }
+  
+  
+ float m_Math::getAngle2PI( Vec2i c1, Vec2i c2 ){//［-M_PI, M_PI）//[-PI, PI]
+       int x = c2[0] - c1[0];
+       int y = c2[1] - c1[1];
+	  if(x==0 && y==0){
+	      return 0;
+	  }
+	  else{
+	      return atan2( y , x);
+	  } 
+}
+
+float m_Math::AngleDiff2PI(float ang1, float ang2){//［-M_PI, M_PI）
+
+      float dif;
+      dif = fabs(ang1-ang2);
+      if(dif > M_PI){ dif = 2* M_PI - dif; }
+//       return dif/M_PI * 180.0 ;
+      return dif ;
+  
+}
+
+float m_Math::AngleAvg2PI(float ang1, float ang2){//［-M_PI, M_PI）
+
+      float dif;
+      dif = fabs(ang1-ang2);
+      float avg;
+      
+      
+      if(dif > M_PI){ 
+	    avg = std::max(double (ang1), double (ang2)) - dif/2.0;
+	   if(avg <= -2.0 *M_PI) {avg += 2*M_PI ;}
+      }
+      else {
+	    avg = std::min(double (ang1), double (ang2)) + dif/2.0;
+	   if(avg > 2.0 *M_PI) {avg -= 2*M_PI ;} 
+      }
+       
+      
+      return avg;
+
+} 
+  
+  
+  
+  
+  
 
 
 float m_Math::getShortestDistance(Line_w line1, Line_w line2)
@@ -716,9 +815,7 @@ double m_Math::Degree2Radian(double d) {
 double m_Math::RadianAngleDiff(double yaw1, double yaw2){
          yaw1 = CorrectAngleRadian360(yaw1);
          yaw2 = CorrectAngleRadian360(yaw2);
-	 
 	 return std::min( fabs(yaw1-yaw2),fabs( 2*M_PI -fabs(yaw1-yaw2)) );
-  
 }
 
 
@@ -895,8 +992,8 @@ void m_Math::SamplePointsOnLine(Line_w line, float dist, vector<tf::Vector3>  &P
       PointsOnLine.clear();
       
       double num = ceil(line.len_w/dist);
-      num= std::max(num,2.);
-      for(int i = 0; i<num; ++i){
+      num= std::max(num,1.);
+      for(int i = 0; i<=num; ++i){
 	  PointsOnLine.push_back(tf::Vector3( line.s_w[0] + float((line.e_w[0] -line.s_w[0])* i)/num,
 				                    line.s_w[1] + float((line.e_w[1] - line.s_w[1])* i)/num, 0 ));
       }
@@ -909,8 +1006,8 @@ void m_Math::SamplePointsOnLines(Vector<Line_w> lines, float dist, std::vector<p
       
        for(unsigned int i =0; i < lines.size(); ++i ){
 	    double num = ceil(lines[i].len_w/dist);
-	    num= std::max(num,2.);
-	    for(int j = 0; j<num; ++j){
+	    num= std::max(num,1.);
+	    for(int j = 0; j<=num; ++j){
 	    PointsOnLines.push_back( make_pair( tf::Vector3( lines[i].s_w[0] + float((lines[i].e_w[0] -lines[i].s_w[0])* j)/num,
 							lines[i].s_w[1] + float((lines[i].e_w[1] - lines[i].s_w[1])* j)/num, 0   ), lines[i].id));
 	    }
@@ -924,8 +1021,8 @@ void m_Math::SamplePointsOnLine(Line line, float dist, vector<cv::Point>  &Point
       PointsOnLine.clear();
       
       double num = ceil(line.len/dist);
-      num= std::max(num,2.);
-      for(int i = 0; i<num; ++i){
+      num= std::max(num  ,1.);
+      for(int i = 0; i<=num ; ++i){
 	  PointsOnLine.push_back(cv::Point( line.s[0] + float((line.e[0] -line.s[0])* i)/num,
 				                    line.s[1] + float((line.e[1] - line.s[1])* i)/num));
       }
@@ -938,10 +1035,10 @@ void m_Math::SamplePointsOnLines(Vector<Line> lines, float dist, vector<cv::Poin
       
        for(unsigned int i =0; i < lines.size(); ++i ){
 	    double num = ceil(lines[i].len/dist);
-	    num= std::max(num,2.);
-	    for(int j = 0; j<num; ++j){
-	    PointsOnLines.push_back(  cv::Point( lines[i].s[0] + float((lines[i].e[0] -lines[i].s[0])* j)/num,
-							lines[i].s[1] + float((lines[i].e[1] - lines[i].s[1])* j)/num  ));
+	    num= std::max(num,1.);
+	    for(int j = 0; j<=num; ++j){
+	        PointsOnLines.push_back(  cv::Point( lines[i].s[0] + double((lines[i].e[0] -lines[i].s[0])* j)/num,
+							lines[i].s[1] + double((lines[i].e[1] - lines[i].s[1])* j)/num  ));
 	    }
       }
 
@@ -1017,6 +1114,62 @@ bool m_Math::intersect( Line a, Line b ,Vec2i& intersetP)
     return true;
 
 }; // END of intersect METHOD
+
+
+
+
+
+
+float m_Math::getTwoRectClosestDist(M_rect a, M_rect b){  
+  
+  float dist = std::numeric_limits<float>::max();
+  int k=0;
+  
+  while(k==0){
+  
+	vector< Vec2i > Pas;
+	vector< Line >  Lbs;
+	
+	Pas.push_back(Vec2i(a.rect.x,                a.rect.y));
+	Pas.push_back(Vec2i(a.rect.x + a.rect.width, a.rect.y));
+	Pas.push_back(Vec2i(a.rect.x ,               a.rect.y + a.rect.height));
+	Pas.push_back(Vec2i(a.rect.x + a.rect.width, a.rect.y  + a.rect.height));
+      
+	
+	  
+	Lbs.push_back(Line( 0,  Vec2i(b.rect.x, b.rect.y),                                Vec2i(b.rect.x + b.rect.width, b.rect.y)));
+	Lbs.push_back(Line( 1,  Vec2i(b.rect.x + b.rect.width, b.rect.y),                 Vec2i(b.rect.x + b.rect.width, b.rect.y  + b.rect.height)));
+	Lbs.push_back(Line( 2,  Vec2i(b.rect.x + b.rect.width, b.rect.y+ b.rect.height),  Vec2i(b.rect.x , b.rect.y + b.rect.height)));
+	Lbs.push_back(Line( 3,  Vec2i(b.rect.x , b.rect.y+ b.rect.height),                Vec2i(b.rect.x , b.rect.y )));
+	
+	
+	for(int i =0; i<4; ++i){
+	    for(int j =0; j<4; ++j){
+	      
+	      Vec2i Pa = Pas[i]; Line Lb = Lbs[j];
+	      float dist_tmp = Point2LineSegDistance(Pa, Lb);
+	      if(dist_tmp < dist){  dist =  dist_tmp;}
+	    }
+
+	}
+	
+	
+	M_rect tmp = a;
+	a= b;
+	b= tmp;
+	k=1;
+	
+  
+  }
+
+  return dist;
+  
+  
+}
+
+
+
+
 
 
 

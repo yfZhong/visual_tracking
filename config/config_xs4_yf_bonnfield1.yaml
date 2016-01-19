@@ -1,0 +1,150 @@
+vision:
+  ballhsv:
+    h0: 0
+    h1: 180
+    s0: 0
+    s1: 115
+    v0: 110
+    v1: 255
+  calib:
+    filePath: /nimbro/share/launch/config/vision/cCFile.yml
+  camera:
+    devNumber: 0
+    flipHor: 0
+    flipVer: 0
+    heightUnDistortion: 1177
+    useBagfile: 1
+    widthUnDistortion: 1620
+  debug:
+    publishTime: 0
+    showAssociateLines: 0
+    showCamPose: 0
+    showCorrespondence: 1
+    showFieldHull: 1
+    showFieldModel: 0
+    showHoughLines: 0
+    showLineInfo: 0
+    showMarkers: 1
+    showMergedLines: 0
+    showNodeGraph: 1
+    showRobPose: 1
+    showSkeletonPixels: 1
+    useKalmanFilter: 1
+    useMotionOdom: 1
+  field:
+    BonnField: 1
+    MaxDistanceFromBottomOfImage: 200
+    maxContourCount: 3
+    minArea: 600
+  fieldhsv:
+    h0: 41
+    h1: 78
+    s0: 70
+    s1: 219
+    v0: 60
+    v1: 110
+  goal:
+    DistanceToMerge: 20
+    MaxOutField: 40
+    MinLineLength: 30
+    VoteDouble: 18
+    cannyThreadshold: 21
+    dilate: 0
+    erode: 0
+    jumpMax: 25
+    minContinuesColor: 10
+    minDoubleLength: 3
+    minEdgeValue: 100
+  goalhsv:
+    h0: 24
+    h1: 126
+    s0: 0
+    s1: 255
+    v0: 120
+    v1: 255
+  graphNode:
+    AngleToMerge: 5
+    DistanceCompToMerge: 0
+    LineWidth: 15
+    MaxDist: 0
+    MaxDistanceForMergeNode1: 50
+    MaxDistanceForMergeNode2: 50
+    MaxLineSegDistance: 35
+    MaxLineSegDistanceForJoint: 400
+    MaxProjectedDistance: 5
+    MergeJointDist: 10
+    MinCmpLineLength: 30
+    MinDist: 1000
+    MinDistForMerge: 50
+    Min_adj: 5000
+    SamplePointDist: 3
+    SmallAngle: 63
+    _MaxDistanceForConnect: 40
+  icp:
+    AvgDistThresholdForConf: 3
+    HeadingOffset: 3.1416
+    IcpInlierDistThreshold: 4912
+    InlierNumThresholdForConf: 30
+    KFOrientationCov: 10000
+    KFPositionCov: 10000
+    SamplePointDist_WorldCord: 0.2
+  kalmanFilter:
+    ErrorThreshod: 5
+    KFOrientationCov: 100000
+    KFPositionCov: 100000
+  line:
+    AngleToMerge: 15
+    AngleToMergeImg: 0
+    Div1: 0.5
+    Div2: 0.7
+    HoughLineMinLineLength: 13
+    HoughLineRho: 7
+    HoughLineTheta: 6
+    HoughLineVoteThreshold: 14
+    HoughLinemaxLineGap: 40
+    LocalOptimalRange: 10
+    MaxNeighborDist: 5
+    MaxPointLineDistance: 100
+    MeasAreaThreshod: 60000
+    MeasLineLengthThreshod: 200
+    MeasLineMaxAngDifThreshod: 60
+    MeasLineNumThreshod: 4
+    MinBrightnessValue: 90
+    MinLineLength: 80
+    MinLineSegDistance: 0.8
+    MinLineSegDistanceImg: 50
+    MinProjectedDistance: 0.35
+    MinProjectedDistanceImg: 23
+    MinSkeletonValue: 50
+    ObstacleLineDistance: -10
+  linehsv:
+    h0: 0
+    h1: 180
+    s0: 11
+    s1: 255
+    v0: 0
+    v1: 254
+  location:
+    x: -1.4
+    y: 6.70552e-09
+    z: 0.58
+  obstacle:
+    minArea: 500
+  obstaclehsv:
+    h0: 100
+    h1: 180
+    s0: 100
+    s1: 255
+    v0: 0
+    v1: 100
+  orientation:
+    x: 0
+    y: 0
+    z: -0.2
+  particleFilter:
+    HeadingOffset: 0
+    MinSumOfLineLengthOnImage: 100
+    ParticleNum: 200
+    RandomSamplePct: 0.2
+  projection:
+    timeToShift: 0.150

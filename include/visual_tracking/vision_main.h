@@ -46,6 +46,9 @@
 #include "IcpPointMatcher/pointMatcher.h"
 #include "CalculatePose/calculatePose.h"
 #include "CalculatePose/kalmanFilter.h"
+
+#include "CalculatePose/hillClimbing.h"
+#include "DataAssociation/dataAssociation.h"
 #include "Projection/DistortionModel.h"
 #include "Parameters/Parameters.h"
 #include "ParticleFilter/singleParticle.h"
@@ -107,21 +110,29 @@ namespace vision
 			FindObstacle ObstacleFinder;
 			FindLines LineFinder;
 			FindNodes NodeFinder;
+			DataAssociation AssociateData;
+			
 
 			
 			PointMatcher pointMatcher;
-			PoseCalculator poseCalculator;
+			
+			HillClimbing poseUpdate;
+			
+// 			PoseCalculator poseCalculator;
 			M_KalmanFilter poseFilter;
 			
 			
 			
-			ParticleFilter particlefilter;
+// 			ParticleFilter particlefilter;
 			LineMatcher lineMatcher;
 			
                         ros::NodeHandle nh;
 			
 			ICamera *camera;
 			bool useBagfile;
+			
+			
+			geometry_msgs::PoseStamped robotPoseS;
 			
 		private:
                         
@@ -133,6 +144,7 @@ namespace vision
 			image_transport::Publisher image_pub_2;
 			image_transport::Publisher image_pub_3;
 			image_transport::Publisher image_pub_4;
+			image_transport::Publisher image_pub_5;
 			image_transport::Publisher image_pub_6;
 			image_transport::Publisher image_pub_7;
 			ros::Publisher robotPose_pub;
@@ -146,6 +158,9 @@ namespace vision
 			ros::Publisher associateLines_pub;
 			ros::Publisher particlePoseMarker_pub;
 			ros::Publisher fieldLineMarker_pub;
+			
+			ros::Publisher HypothesisArray_pub;
+			
 			
 			  //Constants
 // 			int H, W, siX, siY;

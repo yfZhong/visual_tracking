@@ -42,9 +42,12 @@ public:
 	  try
 		{
 			cv_bridge::CvImagePtr cv_ptr;
+// 			
+// // 			cout<<msg->encoding<<endl;
 			cv_ptr = cv_bridge::toCvCopy(msg,
 					sensor_msgs::image_encodings::BGR8);
 			rawImage = cv_ptr->image.clone();
+// 
                         captureTime = msg->header.stamp;
 			if (params.camera.flipHor->get() && params.camera.flipVer->get())
 			{
@@ -61,10 +64,9 @@ public:
 					flip(rawImage, rawImage, 1);
 				}
 			}
-			
+// 			cout<<"captureNum  "<<capNumber<<endl;
 			capNumber++;
-// 			cv::imshow("img",rawImage );
-// 			cv::waitKey(1);
+
 // 			Mat tmpI;
 
 // 			cvtColor(rawImage, tmpI, CV_BGR2YCrCb);

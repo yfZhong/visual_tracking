@@ -76,7 +76,7 @@ bool FindField::FindFieldConvexHull(/* in */  cv::Mat GreenBinary, /* out */Mat 
 // 	  }	     
 // 	}
 	
-       Mat imgToshow(H,W,CV_8UC3,cv::Scalar(150, 150, 150));
+//        Mat imgToshow(H,W,CV_8UC3,cv::Scalar(150, 150, 150));
       
       //finding all contours on this binary image
       vector<vector<cv::Point> > allContours;
@@ -148,7 +148,7 @@ bool FindField::FindFieldConvexHull(/* in */  cv::Mat GreenBinary, /* out */Mat 
       
       
 
-      m_Top = H - boundingRect(fieldConvexHullPoints).y;
+      m_Top = boundingRect(fieldConvexHullPoints).y;
 
       
       vector<vector<cv::Point> > hulls = vector<vector<cv::Point> >(1,fieldConvexHullPoints);

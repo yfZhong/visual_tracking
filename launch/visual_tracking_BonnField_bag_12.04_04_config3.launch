@@ -5,7 +5,7 @@
 	<!--include file="$(find launch)/config/server.launch" /-->
 	
 	 <!--arg name="robot_name" value="$(optenv NIMBRO_ROBOT_NAME)" /-->
-	 <arg name="robot_name" value="xs4_yf_bonnfield" />
+	 <arg name="robot_name" value="xs4_yf_bonnfield3" />
 	 
 
         <node name="config_server" pkg="config_server" type="config_server" output="screen" required="true">
@@ -18,6 +18,11 @@
        <!-- start the vision localization node -->
 	<node pkg="visual_tracking" type="visual_tracking_node" name="visual_tracking" output="screen"> <!--launch-prefix="xterm -e gdb **args"-->
 	</node>
+	
+	
+	        <!-- start bagfile -->
+        <node name="rosbag" pkg="rosbag" type="play" args="--clock -l -r 1.0 /home/yvonne/bags/12.04/04.bag"> 
+         </node>
 	
 	 <!-- start vis -->
 	<!--node name="image_view3" pkg="image_view" type="image_view" respawn="false" output="screen">

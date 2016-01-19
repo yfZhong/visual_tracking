@@ -95,13 +95,19 @@ add_library(visual_tracking
         src/LineMatcher/findNodes.cpp
 
         
+        src/CalculatePose/calculatePose.cpp 
+        src/CalculatePose/kalmanFilter.cpp 
+        src/CalculatePose/hillClimbing.cpp 
+        
+        src/DataAssociation/dataAssociation.cpp 
+        
         src/IcpPointMatcher/icp.cpp
         src/IcpPointMatcher/icpPointToPlane.cpp
         src/IcpPointMatcher/icpPointToPoint.cpp
         src/IcpPointMatcher/kdtree.cpp
         src/IcpPointMatcher/matrix.cpp
-        src/CalculatePose/calculatePose.cpp 
-        src/CalculatePose/kalmanFilter.cpp 
+        
+
     )
  target_link_libraries(visual_tracking 
     ${catkin_LIBRARIES} 

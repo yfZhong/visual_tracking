@@ -175,6 +175,9 @@ namespace vision
 
 	    }
 	    
+	   
+	    
+	    
 	    
 	    void generateKernelImg2(const char* kernelname);
 	    //generate seeds for random variables

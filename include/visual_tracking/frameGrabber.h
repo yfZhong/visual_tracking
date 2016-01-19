@@ -18,6 +18,7 @@
 #include "Parameters/Parameters.h"
 #include "Projection/ForwardProjection.h"
 
+
 using namespace std;
 
 namespace vision
@@ -40,19 +41,21 @@ namespace vision
 			    W = ORG_IMAGE_WIDTH,
 			    siX = UNDISTOTED_IMAGE_WIDTH, 
 			    siY = UNDISTOTED_IMAGE_HEIGHT,
+			    subW = SUB_SAMPLING_WIDTH,
+			    subH = SUB_SAMPLING_HEIGHT,
 			
 		        };
 			
 // 			std::vector<float > weightedWhiteValues;
 			float  weightedWhiteValues  [ H ][ W ];
-
+                        
 			ForwardProjection forw_Proj;
 			
 			
 			Mat rawHSV;
 			Mat Brightness_Channel;
-			Mat GreenBinary;
-			Mat binaryImgs[3];// ball, goal, obstacle
+// 			Mat GreenBinary;
+			
 			Mat fieldConvexHullMat;
 			vector<cv::Point> fieldConvexHullPoints;
 			vector< vector <cv::Point > > ObstacleConvexHull;
@@ -61,9 +64,8 @@ namespace vision
 			int m_Top;
 	
 			unsigned int imagecounter;
-			int skeletonPixelMatrix    [ H ][ W ];
-// 			int skeletonPixelMatrix    [ UNDISTOTED_IMAGE_HEIGHT ][ UNDISTOTED_IMAGE_WIDTH ];
-// 			int *skeletonPixelMatrix;
+// 			int **skeletonPixelMatrix;
+			int **skeletonPixelMatrix_sub;
 			int MaximunNodeNum;
 
 			
@@ -75,17 +77,28 @@ namespace vision
 
 			       imagecounter = 0;
 			       m_Top = 0;
-			       
 
 			       rawHSV = Mat::zeros(H,W, CV_8UC1);
-			       GreenBinary = Mat::zeros(H,W, CV_8UC1);
+			       
 			       fieldConvexHullMat = Mat::zeros(H,W, CV_8UC1);
 			       Brightness_Channel = Mat::zeros(H,W, CV_8UC1);
-			       binaryImgs[BALL_C]= Mat::zeros(H,W, CV_8UC1);
-			       binaryImgs[GOAL_C]= Mat::zeros(H,W, CV_8UC1);
-			       binaryImgs[BLACK_C]= Mat::zeros(H,W, CV_8UC1);
-			       MaximunNodeNum =0;
-// 			       skeletonPixelMatrix=  Mat::zeros( cv::Size(W,H) , CV_32F);
+			      
+			       MaximunNodeNum =0;			       
+			       
+// 			       skeletonPixelMatrix = new int*[siY];
+// 			       for(int j=0;j<siY;j++)
+// 			       {
+// 			       skeletonPixelMatrix[j] = new int[siX]();        
+// 			       }
+			       
+			       
+			       skeletonPixelMatrix_sub = new int*[subH];
+			       for(int j=0;j<subH;j++)
+			       {
+			       skeletonPixelMatrix_sub[j] = new int[subW]();        
+			       }
+			       
+			       
 		}
 		
 		/**
@@ -93,7 +106,23 @@ namespace vision
 		* The destructor will clean all the vectors that were used during the soccer vision execution.
 		*/		
 		~FrameGrabber(){
+		        fieldConvexHullPoints.clear();
 			ObstacleConvexHull.clear();
+	
+			
+// 			for (int i=0;i<siY;i++)
+// 			{
+// 			delete[] skeletonPixelMatrix[i]; 
+// 			}                     
+// 			delete[] skeletonPixelMatrix; 
+			
+			
+			for (int i=0;i<subH;i++)
+			{
+			delete[] skeletonPixelMatrix_sub[i]; 
+			}                     
+			delete[] skeletonPixelMatrix_sub; 
+			
 
 		}
 		

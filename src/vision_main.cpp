@@ -7,9 +7,7 @@ using namespace boost::timer;
 
 Vision::Vision() 
 {
-    
     onInit();
-    drawField();
 }
 
 Vision::~Vision()
@@ -20,6 +18,7 @@ Vision::~Vision()
    image_pub_2.shutdown();
    image_pub_3.shutdown();
    image_pub_4.shutdown();
+   image_pub_5.shutdown();
    image_pub_6.shutdown();
    robotPose_pub.shutdown();
    cameraPose_pub.shutdown();
@@ -66,13 +65,17 @@ void Vision::onInit(){
 	image_pub_  = it->advertise("/vision/fieldHull", 1);
 	image_pub_1 = it->advertise("/vision/skeletonPixels", 1);
 	image_pub_2 = it->advertise("/vision/nodeGraph", 1);
-	image_pub_3 = it->advertise("/vision/houghLines", 1);
-	image_pub_4 = it->advertise("/vision/MergedLines", 1);
-	image_pub_6 = it->advertise("/vision/correspondence", 1);
+	image_pub_3 = it->advertise("/vision/nodeGraph_undistorted", 1);
+	image_pub_4 = it->advertise("/vision/ModelLines", 1);
+	image_pub_5 = it->advertise("/vision/correspondence", 1);
+	image_pub_6 = it->advertise("/vision/correspondence_reverse", 1);
      
 	
 	robotPose_pub = nh.advertise< geometry_msgs::PoseStamped >( "/robotPose", 2 );
 	cameraPose_pub = nh.advertise< geometry_msgs::PoseStamped >( "/cameraPose", 2 );
+	if(params.debug.useKalmanFilter->get()){
+	   robotPose_pub_KF = nh.advertise< geometry_msgs::PoseWithCovarianceStamped  >( "/KFRobotPoses", 2 );
+	}
 	associateLines_pub = nh.advertise< visualization_msgs::MarkerArray >( "associateLines", 1 );
         particlePose_pub = nh.advertise< geometry_msgs::PoseArray >( "/particlePoses", 2 );
 	particleCamPose_pub  = nh.advertise< geometry_msgs::PoseArray >( "/particleCamPoses", 2 );
@@ -80,9 +83,11 @@ void Vision::onInit(){
 	fieldLineMarker_pub =  nh.advertise< visualization_msgs::MarkerArray >( "/fieldElementsMarker", 1 );
 	cameraPose_pub_ICP =  nh.advertise< geometry_msgs::PoseStamped >( "/IcpCamPoses", 2 );
 	robotPose_pub_ICP = nh.advertise< geometry_msgs::PoseStamped >( "/IcpRobotPoses", 2 );
-	robotPose_pub_KF = nh.advertise< geometry_msgs::PoseWithCovarianceStamped  >( "/KFRobotPoses", 2 );
+	
+	HypothesisArray_pub = nh.advertise< geometry_msgs::PoseArray >( "/hypothesisArray", 2 );
 	
 	
+	 camera->TakeCapture();
 	
 	ROS_INFO("Init finished");
 }
@@ -94,17 +99,45 @@ void Vision::update()
 	//cam
 	double confidence = camera->TakeCapture();
 	
+// 	cout<<"conf: "<<confidence<<endl;
 	if (confidence < 0.75 && !camera->IsReady() )
 	{
 		return;
 	}
+
+	ros::Duration dura= (camera->captureTime - CameraFrame.header.stamp);
+	//Init robot Pose
+	if(CameraFrame.imagecounter ==0 ||  dura.toSec()<0){
+	    
+	    
+	    robotPoseS.header.frame_id = "world";
+	    robotPoseS.pose.position.x= params.location.x->get();
+	    robotPoseS.pose.position.y= params.location.y->get();
+	    robotPoseS.pose.position.z= params.location.z->get();
+	
+	    double roll  = params.orientation.x->get();//st: 0.5*0.05PI;
+	    double pitch = params.orientation.y->get();//st: 0.5*0.05PI; 
+	    double yaw   = params.orientation.z->get();//st: 1.0*0.05PI;
+	    robotPoseS.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw ( roll, pitch, yaw);
+  
+	}
+	if(CameraFrame.imagecounter% 20==0 ){
+	  drawField();
+	}
+	
+	
         CameraFrame.imagecounter++;
 	CameraFrame.header.stamp = camera->captureTime;
+	robotPoseS.header.stamp = camera->captureTime;
+	robotPoseS.header.seq =  CameraFrame.imagecounter;
 	
         cvtColor(camera->rawImage, CameraFrame.rawHSV, CV_BGR2HSV);
 	
 	Mat channels[3];
 	split(CameraFrame.rawHSV, channels);//	channels[2]
+	
+
+	
 
 	
 // 	Scalar m = mean(channels[2](Rect(0,200,640,480-200)));
@@ -121,25 +154,28 @@ void Vision::update()
 
 	
 	CameraFrame.Brightness_Channel = channels[2].clone();
-	
-// 	CameraFrame.GreenBinary =  Mat::zeros(CameraFrame.rawHSV.size(), CV_8UC1);
-// 	CameraFrame.binaryImgs[BALL_C] = Mat::zeros(H,W, CV_8UC1);
-//      CameraFrame.binaryImgs[GOAL_C] = Mat::zeros(H,W, CV_8UC1);
-// 	CameraFrame.binaryImgs[BLACK_C] = Mat::zeros(H,W, CV_8UC1);
-// 	Mat fieldBinaryRaw = Mat::zeros(CameraFrame.rawHSV.size(), CV_8UC1);
-	
+	Mat GreenBinary = Mat::zeros(H,W, CV_8UC1);
 	
 	cv::inRange(CameraFrame.rawHSV, Scalar(params.fieldhsv.h0->get(), params.fieldhsv.s0->get(), params.fieldhsv.v0->get()),
-		                    Scalar(params.fieldhsv.h1->get(), params.fieldhsv.s1->get(), params.fieldhsv.v1->get()), CameraFrame.GreenBinary);
+		                    Scalar(params.fieldhsv.h1->get(), params.fieldhsv.s1->get(), params.fieldhsv.v1->get()), GreenBinary);
+	
+	
+
 	
 // 	// ***************************** //
 // 	// * 2. Find Field             * //
 // 	// ***************************** //
 	
-	if( ! FieldFinder.FindFieldConvexHull(CameraFrame.GreenBinary, CameraFrame.fieldConvexHullMat, CameraFrame.fieldConvexHullPoints,  CameraFrame. m_Top)){
+	if( ! FieldFinder.FindFieldConvexHull(GreenBinary, CameraFrame.fieldConvexHullMat, CameraFrame.fieldConvexHullPoints,  CameraFrame. m_Top)){
 	  cout<<"No Field convexhull be found." << endl;
 	  return;
 	}
+	
+	
+// 	     cv::imshow("CameraFrame.fieldConvexHullMat",CameraFrame.fieldConvexHullMat);
+// 	     cv::waitKey(1);
+// 	
+
      
      	hsvRangeC ranges[3];
 	ranges[BALL_C] = params.ballhsv;
@@ -150,15 +186,21 @@ void Vision::update()
 	inTemplate[GOAL_C] = false;
 	inTemplate[BLACK_C] = true;
 	
+	Mat binaryImgs[3];// ball, goal, obstacle
+	binaryImgs[BALL_C]= Mat::zeros(H,W, CV_8UC1);
+	binaryImgs[GOAL_C]= Mat::zeros(H,W, CV_8UC1);
+	binaryImgs[BLACK_C]= Mat::zeros(H,W, CV_8UC1);
 	
-	FieldFinder.ColorClassification(CameraFrame.rawHSV, CameraFrame.fieldConvexHullMat, CameraFrame.binaryImgs,ranges, inTemplate, 3);
+	FieldFinder.ColorClassification(CameraFrame.rawHSV, CameraFrame.fieldConvexHullMat, binaryImgs,ranges, inTemplate, 3);
        
 
 // 	// ***************************** //
 // 	// * 3. Find Obstacles           * //
 // 	// ***************************** //
 	CameraFrame.ObstacleConvexHull.clear();
-	ObstacleFinder.GetObstacleContours( CameraFrame.binaryImgs[BLACK_C],CameraFrame.ObstacleConvexHull);
+	ObstacleFinder.GetObstacleContours( binaryImgs[BLACK_C],CameraFrame.ObstacleConvexHull);
+	
+	
 
 	
 	
@@ -175,7 +217,11 @@ void Vision::update()
 // 	// ********************************* //
 
 // 	LineFinder.findLines(CameraFrame);
-	LineFinder.findSkeletons(CameraFrame);
+// 	LineFinder.findSkeletons(CameraFrame);
+	LineFinder.findBoundingRects(CameraFrame);
+	
+// 	if(LineFinder.Rectangles.size()<2){return;}
+	
 	
 	
 // 	// ********************************* //
@@ -183,233 +229,132 @@ void Vision::update()
 // 	// ********************************* //
 	
 	//§§§§§§§§§§§§§§§§§§§§§§§§//
-	NodeFinder.mainLoop(CameraFrame);
+// 	NodeFinder.mainLoop(CameraFrame);
+	
+	NodeFinder.getRectangle(LineFinder.Rectangles );
+	NodeFinder.findNodeGraph(CameraFrame);
 	
 // 	vector<Point2f> goalPositionOnReal;
 // 	vector<LineSegment> resLines, alllL;
 
 // 	bool goalRes = goalPostFinder.GetPosts(cannyImg,rawHSV,gray,
-// 			goalBinary.clone(), _cameraProjections, hullField,
-// 			resLines, alllL, goalPositionOnReal,
+// 			goalBinary.clone(), _cameraPronjections, hullField,
+// 			resLines, alllL, goalPositioOnReal,
 // 			guiRawImg_pub.thereAreListeners(), guiRawImg);
 	
-// 	
-// 	
-// 
-// // 	 cout<<LineFinder.LinesOnImg.size()<<endl;
-// 	 
-// // 	double yaw = 30./180. * M_PI;double roll = 30./180. * M_PI;double pitch = 30./180. * M_PI;
-// // 	geometry_msgs::Quaternion a = tf::createQuaternionMsgFromRollPitchYaw ( 0,  pitch,  yaw);
-// // 	cout<<"a  "<< a.x<<", "<< a.y<<", "<< a.z<<", "<< a.w<<std::endl;
-// // 	
-// // // 	yaw = 60./180. * M_PI;
-// // 	double delta_yaw = 30./180. * M_PI;
-// // 	geometry_msgs::Quaternion b = tf::createQuaternionMsgFromRollPitchYaw ( 0, 0,  delta_yaw);
-// // 	cout<<"b  "<< b.x<<", "<< b.y<<", "<< b.z<<", "<< b.w<<std::endl;
-// // 	
-// // // 	geometry_msgs::Quaternion c = tf::createQuaternionMsgFromRollPitchYaw ( 0, 0,  yaw);
-// // // 	std::cout<<"c "<< c.x<<", "<< c.y<<", "<< c.z<<", "<< c.w<<std::endl;
-// // 	
-// // 	
-// // 	
-// // 	geometry_msgs::Quaternion d = tools.quaternionMultiplication(b,a);
-// // // 	d = tools.quaternionMultiplication(c,d);
-// // 	std::cout<<"a*b "<< d.x<<", "<< d.y<<", "<< d.z<<", "<< d.w<<std::endl;
-// // 	
-// // 	geometry_msgs::Quaternion e = tf::createQuaternionMsgFromRollPitchYaw ( 0,  pitch,  yaw+delta_yaw);
-// // 	
-// // //         c = tools.quaternionMultiplication(b,a);
-// // 	std::cout<<"e  "<< e.x<<", "<< e.y<<", "<< e.z<<", "<< e.w<<std::endl;
-// // 	
-// // 	
-// // 	cout<<endl;
-// 	
-// 	
-// 	
-// 	
-// 	/*
-// 	 yaw = -90./180. * M_PI;
-// 	 a = tf::createQuaternionMsgFromRollPitchYaw ( 0,  0,  yaw);
-// 	cout<<"-90  "<< a.x<<", "<< a.y<<", "<< a.z<<", "<< a.w<<std::endl;
-// 	
-// 	
-// 	
-// 	
-// 	 yaw = 270./180. * M_PI;
-// 	 a = tf::createQuaternionMsgFromRollPitchYaw ( 0,  0,  yaw);
-// 	 cout<<"270  "<< a.x<<", "<< a.y<<", "<< a.z<<", "<< a.w<<std::endl;
-// 	
-// 	cout<<endl;*/
-// // 	cout<<endl;
-// 	
-// 	
-// 	
-// 	// ********************************* //
-// 	// particle
-// 	// ********************************* //
-// // 	geometry_msgs::Quaternion a,b;
-// // 	a.x= 0; a.y=0; a.z=1; a.w=1;
-// // 	tools.quaternionNormalize(a);
-// // 	 std::cout<< a.x<<", "<< a.y<<", "<< a.z<<", "<< a.w<<std::endl;
-// // 	b.x= 0; b.y=1; b.z=0; b.w=0;
-// 
-// // 	geometry_msgs::Quaternion c = tools.quaternionMultiplication(a,b);
-// // 		      std::cout<< c.x<<", "<< c.y<<", "<< c.z<<", "<< c.w<<std::endl;
-// // 	robotPose.orientation = c ;
-// 	
-        
+
 	
 	
 	//§§§§§§§§§§§§§§§§§§§§§§§§//
-	geometry_msgs::Pose robotPose;
-	robotPose.position.x= params.location.x->get();robotPose.position.y= params.location.y->get();robotPose.position.z= params.location.z->get();
-	
-        float roll  = params.orientation.x->get();//st: 0.5*0.05PI;
-        float pitch = params.orientation.y->get();//st: 0.5*0.05PI; 
-        float yaw   = params.orientation.z->get();//st: 1.0*0.05PI;
-        robotPose.orientation = tf::createQuaternionMsgFromRollPitchYaw ( roll, pitch, yaw);
-	       
-	CameraFrame.forw_Proj.onInit(CameraFrame.header.stamp);;
-	CameraFrame.forw_Proj.setRobotPose(robotPose);
-	CameraFrame.forw_Proj.mainLoop();	
-	
-        pointMatcher.matcher(NodeFinder.undistortedNodeSamplePoins, CameraFrame.forw_Proj.ModelPointsInImg);
+
+    
+	CameraFrame.forw_Proj.onInit(CameraFrame.header.stamp);
+
+
 	
 	
-	float AvgDistThresholdForConf = params.icp.AvgDistThresholdForConf->get();
-	float InlierNumThresholdForConf = params.icp.InlierNumThresholdForConf->get();
-	float conf;float dist_cnf, num_cnf;
-	if(pointMatcher.inlierNum <4  ){ conf = 0 ;}
-	else{
-	  
-	      
-		//useful values
-	      float average_projected_error = 0;
-	      for ( int i = 0; i<pointMatcher.inlierNum; ++i ){
-		average_projected_error += sqrt(pow(pointMatcher.correspondences[i*8 + 4] - pointMatcher.correspondences[i*8 + 0], 2) + 
-						pow(pointMatcher.correspondences[i*8 + 5] - pointMatcher.correspondences[i*8 + 1], 2));
-	      }
-	      average_projected_error/= float(pointMatcher.inlierNum );
-	      if(average_projected_error <AvgDistThresholdForConf){ dist_cnf = 1; }
-	      else{ dist_cnf = std::max(float(0),  1- (average_projected_error-AvgDistThresholdForConf)/(AvgDistThresholdForConf*4));}
-	      
-	      
-	       if(pointMatcher.inlierNum >InlierNumThresholdForConf){ num_cnf = 1; }
-	       else{ num_cnf = float(pointMatcher.inlierNum )/ InlierNumThresholdForConf;}  
-	       
-	       conf= 0.5*(dist_cnf + num_cnf);
+	float error;
+
+	
+	//hillclimb method
+// 	poseUpdate.mainLoop(robotPoseS.pose, CameraFrame, pointMatcher, NodeFinder);
+	
+// 	
+	poseUpdate.mainLoop(robotPoseS.pose, CameraFrame, NodeFinder);
+	
+	
+		//for vis
+        CameraFrame.forw_Proj.setRobotPose( robotPoseS.pose );
+	CameraFrame.forw_Proj.GetModelLineComps();
+	AssociateData.AssociateDetectionToModel( CameraFrame, NodeFinder, error);
+	AssociateData.AssociateModelToDetection( CameraFrame, NodeFinder, error);
+	
+	
+	
+	
+// 	 error=poseUpdate.AssociateData.getDTMError();
 	 
+// 	 cout<<"error "<<error<<endl;
+	 
+// 	float conf;
+// 	if(error > 100000){ conf = 0; }
+// 	else{ conf = (100000.0- error)/100000.0; }
+// 	 cout<<"conf "<<conf<<endl;
+	
+	if(params.debug.useKalmanFilter->get()){
+	      poseFilter.setCurTime(CameraFrame.header.stamp);
+	      poseFilter.getMeasurementCov( poseUpdate.cov);
+	      poseFilter.mainLoop( robotPoseS, 1.0 );
+	      poseFilter.getRobotPose(robotPoseS);
+	      robotPose_pub_KF.publish(poseFilter.estimate_pose_cov);
 	}
-	
-	int offsetx = (siX - W) / 2.;
-	int offsety = (siY - H) / 2.;
-	std::vector<cv::Point2f> imgPts;// 2d image points
-	std::vector<cv::Point3f> worldPts;//3D world points
-	
-	
-	//point to Point
-	for (unsigned int i = 0; i<pointMatcher.inlierIdx.size(); ++i ){
-	    int idx = pointMatcher.inlierIdx[i];
-	    cv::Point  inlier =  CameraFrame.forw_Proj.ModelPointsInImgWithId[idx].first;
-	    imgPts.push_back(cv::Point(inlier.x- offsetx ,inlier.y-offsety ));
-	    
-	    int id = CameraFrame.forw_Proj.ModelPointsInImgWithId[idx].second;
-	    bool findProjectedP = false;
-	    if( id>=0){
-	       for(unsigned int j=0; j <CameraFrame.forw_Proj.Field_Lines_Img.size(); ++j ){
-		    if(id == CameraFrame.forw_Proj.Field_Lines_Img[j].id){
-			Vec2i  pProject;
-			m_Math::GetProjectivePoint( Vec2i(pointMatcher.correspondences[i*8 + 2], pointMatcher.correspondences[i*8 + 3] ), CameraFrame.forw_Proj.Field_Lines_Img[j] ,  pProject);
-			cv::Point  pOnImg (pProject[0],pProject[1]);
-			pointMatcher.correspondences[i*8 + 6] = pProject[0];
-			pointMatcher.correspondences[i*8 + 7] = pProject[1];
-			
-			cv::Point3f  pWorld;
-			CameraFrame.forw_Proj.projectImgPoint2WorldCord(pOnImg, pWorld);
-			findProjectedP = true;
-			worldPts.push_back(pWorld);
-			break;
-		    }
-	        }
-	    }
-	    if(findProjectedP == false) {
-		  worldPts.push_back(cv::Point3f(CameraFrame.forw_Proj.ModelPointsInWorldCord[idx].x,
-						 CameraFrame.forw_Proj.ModelPointsInWorldCord[idx].y,
-						 CameraFrame.forw_Proj.ModelPointsInWorldCord[idx].z));
-	    }
-  
-        }
-//         
-	
-	
-	
-	
+
 
 	
-        //Point to plane
-//         for (unsigned int i = 0; i<model.pointMatcher.inlierIdx.size(); ++i ){
-// 	    int idx = model.pointMatcher.inlierIdx[i];
-// 	    cv::Point  inlier =  model.forw_Proj.ModelPointsInImgWithId[idx].first;
-// 	    imgPts.push_back(cv::Point(inlier.x- offsetx ,inlier.y-offsety ));
-// 
-// 	    int id = model.forw_Proj.ModelPointsInImgWithId[idx].second;
-// 	  
-// 	    cv::Point  pOnImg;
-// 	    if(id<0){ pOnImg =  cv::Point(model.pointMatcher.correspondences[i*8 + 4],model.pointMatcher.correspondences[i*8 + 5]); }
-// 	    
-// 	    else{
-// 	       bool findProjectedP = false;
-// 	       for(unsigned int j=0; j <model.forw_Proj.Field_Lines_Img.size(); ++j ){
-// 		 
-// 		    if(id == model.forw_Proj.Field_Lines_Img[j].id){
-// 			Vec2i  pProject;
-// 			m_Math::GetProjectivePoint( Vec2i(model.pointMatcher.correspondences[i*8 + 2], model.pointMatcher.correspondences[i*8 + 3] ), 
-// 						    model.forw_Proj.Field_Lines_Img[j] ,  pProject);
-// 			pOnImg =  cv::Point(pProject[0],pProject[1]);
-//                         findProjectedP = true;
-// 			break;
-// 		    }
-// 	        }
-// 	        if(findProjectedP ==false){pOnImg =  cv::Point(model.pointMatcher.correspondences[i*8 + 4],model.pointMatcher.correspondences[i*8 + 5]);
-// 		}
-// // 			model.pointMatcher.correspondences[i*8 + 6] = pOnImg.x;
-// // 			model.pointMatcher.correspondences[i*8 + 7] = pOnImg.y;
-// 			cout<< model.forw_Proj.ModelPointsInImg[idx].x<<" =? "<<pOnImg.x<<"--------------"<<
-// 		               model.forw_Proj.ModelPointsInImg[idx].y<<" =? "<< pOnImg.y<<endl;
-// 	    }
-// 	    
-// 	    cv::Point3f  pWorld;
-// 	    model.forw_Proj.projectImgPoint2WorldCord(pOnImg, pWorld);
-// 	    worldPts.push_back(pWorld);
-//         }
-	 
-	 
-// 	for ( int i = 0; i<model.pointMatcher.inlierNum; ++i ){
-// 	    imgPts.push_back(cv::Point(model.pointMatcher.correspondences[i*8 + 0]- offsetx , model.pointMatcher.correspondences[i*8 + 1]-offsety ));
-// 	}
-// 	for (unsigned int i = 0; i<model.pointMatcher.inlierIdx.size(); ++i ){
-//              worldPts.push_back(cv::Point3f(model.forw_Proj.ModelPointsInWorldCord[model.pointMatcher.inlierIdx[i]].x,
-// 					    model.forw_Proj.ModelPointsInWorldCord[model.pointMatcher.inlierIdx[i]].y,
-// 					    model.forw_Proj.ModelPointsInWorldCord[model.pointMatcher.inlierIdx[i]].z));
-//   
-//         }
 
-	
-	
-	
-	
-	
-	
-	
 	
 	   //§§§§§§§§§§§§§§§§§§§§§§§§//
-        geometry_msgs::PoseStamped rawcamPose, rawRobotPose;
-        poseCalculator.calculatePose(imgPts, worldPts, CameraFrame.forw_Proj, rawcamPose, rawRobotPose);
+//         geometry_msgs::PoseStamped rawcamPose, rawRobotPose;
+//         poseCalculator.calculatePose(imgPts, worldPts, CameraFrame.forw_Proj, rawcamPose, rawRobotPose);
 	
 	
 	
-       poseFilter.setCurTime(CameraFrame.header.stamp );
-       poseFilter.measurementSub( rawRobotPose, conf );
+	
+	
+	
+// 	float conf =1, dist_cnf=1, num_cnf=1;
+// 	
+// 	  
+// 	if(params.debug.useKalmanFilter->get()==false ){
+// 	  
+// 		      //save the new pose	
+// // 	    params.location.x->set(robotPose.position.x);
+// // 	    params.location.y->set(robotPose.position.y);
+// // 	    params.location.z->set(robotPose.position.z);
+// // 	    
+// // 	    //calculate roll pitch yaw from quaternion
+// // 	    tf::Quaternion q(robotPose.orientation.x, robotPose.orientation.y, robotPose.orientation.z,robotPose.orientation.w);
+// // 	    q.normalized();
+// // 	    tf::Matrix3x3 m(q);
+// // 	    m.getRPY(roll, pitch, yaw);
+// // 	    
+// // 	    params.orientation.x->set(roll);
+// // 	    params.orientation.y->set(pitch);
+// // 	    params.orientation.z->set(yaw);
+// 	  
+// 	}
+// 	else{
+// 	    //calculate the confidence
+// 	    float AvgDistThresholdForConf = params.icp.AvgDistThresholdForConf->get();
+// 	    float InlierNumThresholdForConf = params.icp.InlierNumThresholdForConf->get();
+// 	  
+// 	    if(pointMatcher.inlierNum < 4  ){ conf = 0 ;}
+// 	    else{
+// 		    //useful values
+// 		  float average_projected_error = 0;
+// 		  for ( int i = 0; i<pointMatcher.inlierNum; ++i ){
+// 		    average_projected_error += sqrt(pow(pointMatcher.correspondences[i*8 + 4] - pointMatcher.correspondences[i*8 + 0], 2) + 
+// 						    pow(pointMatcher.correspondences[i*8 + 5] - pointMatcher.correspondences[i*8 + 1], 2));
+// 		  }
+// 		  average_projected_error/= float(pointMatcher.inlierNum );
+// 		  if(average_projected_error <AvgDistThresholdForConf){ dist_cnf = 1; }
+// 		  else{ dist_cnf = std::max(float(0),  1- (average_projected_error-AvgDistThresholdForConf)/(AvgDistThresholdForConf*4));}
+// 		  
+// 		  
+// 		  if(pointMatcher.inlierNum >InlierNumThresholdForConf){ num_cnf = 1; }
+// 		  else{ num_cnf = float(pointMatcher.inlierNum )/ InlierNumThresholdForConf;}  
+// 		  
+// 		  conf= 0.5*(dist_cnf + num_cnf);
+// 	    }
+//   
+// 	    
+// 	}
+// 	
+	geometry_msgs::PoseStamped camPoseS;
+	CameraFrame.forw_Proj.TfRobotPose2CamPose( robotPoseS ,  camPoseS );
+        
+	
+
 	
 	
 	
@@ -437,18 +382,17 @@ void Vision::update()
 	if(params.debug.showRobPose->get()){
 	  
 	  
-	    cameraPose_pub_ICP.publish(rawcamPose);
-	    robotPose_pub_ICP.publish(rawRobotPose);
-	    robotPose_pub_KF.publish(poseFilter.estimate_pose_cov);
-	    
-// 	    robotPose_pub.publish(particlefilter.robotPose);
+// 	    cameraPose_pub_ICP.publish(rawcamPose);
+// 	    robotPose_pub_ICP.publish(rawRobotPose);
+	   
+	    robotPose_pub.publish(robotPoseS);
+	    cameraPose_pub.publish(camPoseS);
+	    HypothesisArray_pub.publish(poseUpdate.hypothesisArray);
 // 	    cameraPose_pub.publish(particlefilter.cameraPose);
 // 	    particlePose_pub.publish(particlefilter.particles_ego_rot);
 //          particleCamPose_pub.publish(particlefilter.particles_camera);
 	}
-	if(params.debug.showFieldModel->get()){
-            drawField();
-	}
+
 	
 	if(params.debug.showFieldHull->get()){
 	    //initial rgb image
@@ -476,42 +420,31 @@ void Vision::update()
 	
         if(params.debug.showSkeletonPixels->get()){
 	  
-// 	    cv::Mat skeletonPixels(cv::Size(siX,siY),CV_8UC3,cv::Scalar(150, 150, 150));
-// 
-// 	    //draw detected points
-// 	    for ( unsigned int i = 0; i < LineFinder.undistortedDetectedPoints.size() ; i++ ) { 
-// 		cv::circle(skeletonPixels, LineFinder.undistortedDetectedPoints[i], 2, cv::Scalar(0, 10, 200),-1);
-// 	    }
-// 	    
-// // 	     vector<vector<cv::Point> > tmphulls = vector<vector<cv::Point> >(1,FieldFinder.fieldConvexHullPoints);
-// //           drawContours(skeletonPixels, tmphulls, -1,  cv::Scalar(200, 0, 50), 2, 8);
-// 	    
-// 	      sensor_msgs::Image img_out1;
-// 	      img_out1.header = CameraFrame.header;
-// 	      img_out1.height = siY;
-// 	      img_out1.width = siX;
-// 	      img_out1.step = 3*siX;
-// // 	      img_out1.is_bigendian = img->is_bigendian;
-// 	      img_out1.encoding = std::string("bgr8");
-// 	      img_out1.data.assign(skeletonPixels.datastart, skeletonPixels.dataend);
-// 	      image_pub_1.publish(img_out1);
-	  
-	  	cv::Mat skeletonPixels(cv::Size(W,H),CV_8UC3,cv::Scalar(150, 150, 150));
+	      cv::Mat skeletonPixels(cv::Size(W,H),CV_8UC3,cv::Scalar(150, 150, 150));
+	      
 
 		//draw detected points
-		for ( unsigned int i = 0; i < LineFinder.detectedPoins.size() ; i++ ) { 
-		    cv::circle(skeletonPixels, LineFinder.detectedPoins[i], 2, cv::Scalar(0, 10, 200),-1);
-		}
-		
-    // 	     vector<vector<cv::Point> > tmphulls = vector<vector<cv::Point> >(1,FieldFinder.fieldConvexHullPoints);
-    //           drawContours(skeletonPixels, tmphulls, -1,  cv::Scalar(200, 0, 50), 2, 8);
-		
+		 for ( unsigned int i = 0; i < LineFinder.detectedPoins.size() ; i++ ) { 
+                   cv::circle(skeletonPixels,cv::Point( LineFinder.detectedPoins[i].x , (LineFinder.detectedPoins[i].y)), 1, cv::Scalar(0, 10, 200),-1);
+                  }
+         
+		  for(unsigned int i=0; i<LineFinder.Rectangles.size(); i++){
+		      cv::line( skeletonPixels, cv::Point((LineFinder.Rectangles[i].rect.x),                                    (LineFinder.Rectangles[i].rect.y )), 
+					    cv::Point((LineFinder.Rectangles[i].rect.x+ LineFinder.Rectangles[i].rect.width), (LineFinder.Rectangles[i].rect.y  )),   cv::Scalar(0,0,0), 1, 8 );
+		      cv::line( skeletonPixels, cv::Point((LineFinder.Rectangles[i].rect.x+ LineFinder.Rectangles[i].rect.width), (LineFinder.Rectangles[i].rect.y  )),   
+					    cv::Point((LineFinder.Rectangles[i].rect.x+ LineFinder.Rectangles[i].rect.width), (LineFinder.Rectangles[i].rect.y + LineFinder.Rectangles[i].rect.height )),   cv::Scalar(0,0,0), 1, 8 );
+		      cv::line( skeletonPixels, cv::Point((LineFinder.Rectangles[i].rect.x+ LineFinder.Rectangles[i].rect.width), (LineFinder.Rectangles[i].rect.y + LineFinder.Rectangles[i].rect.height )),  
+					    cv::Point((LineFinder.Rectangles[i].rect.x),                                    (LineFinder.Rectangles[i].rect.y + LineFinder.Rectangles[i].rect.height )),    cv::Scalar(0,0,0), 1, 8 );
+		      cv::line( skeletonPixels, cv::Point((LineFinder.Rectangles[i].rect.x),                                    (LineFinder.Rectangles[i].rect.y + LineFinder.Rectangles[i].rect.height )),
+					    cv::Point((LineFinder.Rectangles[i].rect.x),                                    (LineFinder.Rectangles[i].rect.y )),  cv::Scalar(0,0,0), 1, 8 ); 
+		    }
+
 		  sensor_msgs::Image img_out1;
 		  img_out1.header = CameraFrame.header;
 		  img_out1.height = H;
 		  img_out1.width = W;
 		  img_out1.step = 3*W;
-    // 	      img_out1.is_bigendian = img->is_bigendian;
+    // 	          img_out1.is_bigendian = img->is_bigendian;
 		  img_out1.encoding = std::string("bgr8");
 		  img_out1.data.assign(skeletonPixels.datastart, skeletonPixels.dataend);
 		  image_pub_1.publish(img_out1);
@@ -520,248 +453,427 @@ void Vision::update()
 	}
 	
 	
+	cv::Mat nodeGraph_undistorted;
 	//         //showNodeGraph
         if(params.debug.showNodeGraph->get()){
-	  
-	  	cv::Mat nodeGraph(cv::Size(W,H),CV_8UC3,cv::Scalar(150, 150, 150));
-		LinearGraph_Buffer::iterator it;
-		int j=-1;
-                for ( it = NodeFinder.m_LinearGraph_Buffer->begin( ); it != NodeFinder.m_LinearGraph_Buffer->end( ); it++ ) { // [1]
-		  ++j;
-			       if(it->sumOfLength !=0 ){
-			  
-			      vector<int> reachableNodes = it->reachableNodeIds;
-			      vector<Line> Lines = it->Lines;
+	
+	      cv::Mat nodeGraph(cv::Size(W,H),CV_8UC3,cv::Scalar(150, 150, 150));
+	      nodeGraph_undistorted =cv::Mat(cv::Size(siX,siY),CV_8UC3,cv::Scalar(150, 150, 150));
+	     
+	      LinearGraph_Buffer::iterator it_;
+      
+	      int colorIdx=-1;
+	      
+	      for ( it_ = NodeFinder.m_LinearGraph_Buffer->begin( ); it_ != NodeFinder.m_LinearGraph_Buffer->end( ); it_++ ) { // 
+		  
+		  
+		  if((*it_).sumOfLength < params.graphNode._MinCmpLineLength->get()){continue;}
+		  colorIdx++;
+		  vector<Line> &ls = it_->Lines;
+		  vector<Line> &ls_udistorted = it_->UndistortedLines;
+		  vector<Line> &TangentLines = it_->TangentLines;
+		
+		  cv::Scalar color = NodeFinder.colorPool[ colorIdx%(NodeFinder.colorPool.size())];
+		  
 
-			      cv::Scalar color = NodeFinder.colorPool[ j%(NodeFinder.colorPool.size())];
-			      
-// 			      for(unsigned int k =0; k<reachableNodes.size(); ++k){
-// 				  cv::Point p(( * m_NodeBuffer_tmp )[ reachableNodes[k] ].f_x_pos, ( * m_NodeBuffer_tmp )[ reachableNodes[k] ].f_y_pos); 
-// 				  cv::circle(nodeGraph, p, 3, color,-1);
-// 				  std::ostringstream ss;
-// 				  ss<<reachableNodes[k];
-// 				  cv::putText(nodeGraph,ss.str(), cv::Point(p.x-20,p.y-20),cv::FONT_HERSHEY_TRIPLEX,0.3,cv::Scalar(0,0,0),1);
-// 			      } 
-			      
-			      
-			      for(unsigned int k = 0; k<Lines.size();k++){
-				  cv::Point p1(Lines[k].s[0], Lines[k].s[1] ); 
-				  cv::Point p2(Lines[k].e[0], Lines[k].e[1] ); 
-				  cv::line( nodeGraph, p1, p2, color, 2, 0 );
-				  cv::circle(nodeGraph, p1, 4, color,-1);
-				  cv::circle(nodeGraph, p2, 4, color,-1);
-			      } 
-			  }
-			  
-			
+		  
+		  
+		  for(unsigned int lidx=0; lidx<ls.size();++lidx){
+		    cv::line( nodeGraph, cv::Point(ls[lidx].s[0], (ls[lidx].s[1] )),  cv::Point(ls[lidx].e[0], (ls[lidx].e[1])),  color, 1, 8 );
+		    cv::circle(nodeGraph,cv::Point(ls[lidx].s[0], (ls[lidx].s[1])),2, color,-1);
+		    cv::circle(nodeGraph,cv::Point(ls[lidx].e[0], (ls[lidx].e[1])),2, color,-1);
+		  }
+		  
+// 		  std::ostringstream ss0, ss1,ss2;
+// 	  ss0<<"Dist confidence:    "<< dist_cnf;
+// 	  ss1<<"Num confidence:     "<< num_cnf;
+// 	  ss2<<"Sum of confidence:  "<< conf;
+// 	
+// 	  cv::putText(correspondence,ss0.str(), cv::Point(50,30),cv::FONT_HERSHEY_TRIPLEX,0.5,cv::Scalar(0,0,0),1);
+// 	  cv::putText(correspondence,ss1.str(), cv::Point(50,50),cv::FONT_HERSHEY_TRIPLEX,0.5,cv::Scalar(0,0,0),1);
+// 	  cv::putText(correspondence,ss2.str(), cv::Point(50,70),cv::FONT_HERSHEY_TRIPLEX,0.5,cv::Scalar(0,0,0),1);
+		  
+		  
+		  if(params.debug.showTangentLine->get()){
+
+	 
+		       for(unsigned int lidx=0; lidx<TangentLines.size();++lidx){
+			  cv::line( nodeGraph_undistorted, cv::Point(TangentLines[lidx].s[0], (TangentLines[lidx].s[1] )), 
+							    cv::Point(TangentLines[lidx].e[0], (TangentLines[lidx].e[1])),  color, 2, 8 );
+// 			  cout<<TangentLines[lidx].ang<<", ";
+			 
 		      } 
+		      
+// 		        cout<<"     avg  "<< it_->undistortedAngleAvg <<"   anglechange "<<  it_->undistortedAngleChangeAvg<<endl;
+// 			cout<<endl;
+			 std::ostringstream angleAvg, anglechange;
+			 angleAvg << m_Math::Radian2Degree(- it_->undistortedAngleAvg);
+			 anglechange<<  it_->undistortedAngleChangeAvg;
+			 int midP = TangentLines.size()/2;
+			 cv::putText(nodeGraph_undistorted, angleAvg.str(), cv::Point(TangentLines[midP].s[0]-30, (TangentLines[midP].s[1] -50)),cv::FONT_HERSHEY_TRIPLEX,1,cv::Scalar(0,0,0),1);
+			 cv::putText(nodeGraph_undistorted, anglechange.str(), cv::Point(TangentLines[midP].s[0]-30, (TangentLines[midP].s[1]-20 )),cv::FONT_HERSHEY_TRIPLEX,1,cv::Scalar(0,0,0),1);
+			 
 
-		  sensor_msgs::Image img_out2;
-		  img_out2.header = CameraFrame.header;
-		  img_out2.height = H;
-		  img_out2.width = W;
-		  img_out2.step = 3*W;
-    // 	      img_out2.is_bigendian = img->is_bigendian;
-		  img_out2.encoding = std::string("bgr8");
-		  img_out2.data.assign(nodeGraph.datastart, nodeGraph.dataend);
-		  image_pub_2.publish(img_out2);
+			 
+
+		  }
+		  else{
+		    
+		    
+		      for(unsigned int lidx=0; lidx<ls_udistorted.size();++lidx){
+			  cv::line(nodeGraph_undistorted, cv::Point(ls_udistorted[lidx].s[0], (ls_udistorted[lidx].s[1] )), 
+				                          cv::Point(ls_udistorted[lidx].e[0], (ls_udistorted[lidx].e[1])),  color, 3, 8 );
+			  
+			}
+			
+			vector<Vec2i> &Points = it_->Points;
+			
+			for(int i= 0; i < Points.size(); ++i){
+			    cv::circle(nodeGraph_undistorted,cv::Point(Points[i][0], (Points[i][1])),5,color,-1);
+			}
+			
+			
+		    
+		  }
+
+	      }
+	  
+		    
+		      sensor_msgs::Image img_out2;
+		      img_out2.header = CameraFrame.header;
+		      img_out2.height = H;
+		      img_out2.width = W;
+		      img_out2.step = 3*W;
+		      img_out2.encoding = std::string("bgr8");
+		      img_out2.data.assign(nodeGraph.datastart, nodeGraph.dataend);
+		      image_pub_2.publish(img_out2);
+		      
+		      
+		      
+		      sensor_msgs::Image img_out3;
+		      img_out3.header = CameraFrame.header;
+		      img_out3.height = siY;
+		      img_out3.width = siX;
+		      img_out3.step = 3*siX;
+		      img_out3.encoding = std::string("bgr8");
+		      img_out3.data.assign(nodeGraph_undistorted.datastart, nodeGraph_undistorted.dataend);
+		      image_pub_3.publish(img_out3);
+
+	  }
+	    
+        if(params.debug.showModelLines->get()){
+	    
+	       cv::Mat ModelLines(cv::Size(siX,siY),CV_8UC3,cv::Scalar(150, 150, 150));
+	     
+	       ModelLine_Buffer::iterator it_;
+	       int j =0;
+	       for ( it_ =  CameraFrame.forw_Proj.m_ModelLine_Buffer->begin( ); it_ !=  CameraFrame.forw_Proj.m_ModelLine_Buffer->end( ); it_++ ) { // 
+		 j++;
+		      vector<Vec2i> &points = it_->UndistortedPoints;
+		      vector<Line> &ls_udistorted = it_->UndistortedLines;
+		      Line &Longline = it_->LongLine;
+		      if(it_->id >=0){cv::line( ModelLines, cv::Point(Longline.s[0], (Longline.s[1] )), 
+					      cv::Point(Longline.e[0], (Longline.e[1])),  cv::Scalar(0,250, 255), 3, 8 ); 
+			
+		         
+		      }
+		      else{
+		    	for(unsigned int lidx=0; lidx<ls_udistorted.size();++lidx){
+			    cv::line( ModelLines, cv::Point(ls_udistorted[lidx].s[0], (ls_udistorted[lidx].s[1] )), 
+					      cv::Point(ls_udistorted[lidx].e[0], (ls_udistorted[lidx].e[1])),  cv::Scalar(0,250, 255), 3, 8 );
+			
+// 			    cout<<"  "<< ls_udistorted[lidx].s[0]<<"  "<<ls_udistorted[lidx].s[1]<<"  end  "
+// 			         <<ls_udistorted[lidx].e[0]<<"  "<<ls_udistorted[lidx].e[1]<<endl;
+			}
+		       
+		      }
+		     
+		      for(unsigned int lidx=0; lidx<points.size();++lidx){
+			cv::circle(ModelLines,cv::Point(points[lidx][0], (points[lidx][1])),3,cv::Scalar(0,250, 255),-1);
+			
+		      }
+		 
+	       }
+		  
+	    
+	    
+	      sensor_msgs::Image img_out4;
+	      img_out4.header = CameraFrame.header;
+	      img_out4.height = siY;
+	      img_out4.width = siX;
+	      img_out4.step = 3*siX;
+	      img_out4.encoding = std::string("bgr8");
+	      img_out4.data.assign(ModelLines.datastart, ModelLines.dataend);
+	      image_pub_4.publish(img_out4);
+
+	    
+	  }
+	    
+	    
+	    
+	    
+		    //correspondence
+	if(params.debug.showCorrespondence->get()){
+// 	    cv::Mat correspondence(cv::Size(siX,siY),CV_8UC3,cv::Scalar(150, 150, 150));
+	    cv::Mat correspondence =nodeGraph_undistorted.clone();
+	    
+
+	    ModelLine_Buffer::iterator it_;
+	    for ( it_ =  CameraFrame.forw_Proj.m_ModelLine_Buffer->begin( ); it_ !=  CameraFrame.forw_Proj.m_ModelLine_Buffer->end( ); it_++ ) { // 
+		  vector<Vec2i> &points = it_->UndistortedPoints;
+		  vector<Line> &ls_udistorted = it_->UndistortedLines;
+		  Line &Longline = it_->LongLine;
+		  if(it_->id >=0){cv::line( correspondence, cv::Point(Longline.s[0], (Longline.s[1] )), 
+					  cv::Point(Longline.e[0], (Longline.e[1])),  cv::Scalar(0,250, 255), 1, 8 ); 
+		  }
+		  else{
+		    for(unsigned int lidx=0; lidx<ls_udistorted.size();++lidx){
+			cv::line( correspondence, cv::Point(ls_udistorted[lidx].s[0], (ls_udistorted[lidx].s[1] )), 
+					  cv::Point(ls_udistorted[lidx].e[0], (ls_udistorted[lidx].e[1])),  cv::Scalar(0,250, 255), 1, 8 );
+		
+		    }
+		    
+		  }
+		  
+		  for(unsigned int lidx=0; lidx<points.size();++lidx){
+		    cv::circle(correspondence,cv::Point(points[lidx][0], (points[lidx][1])),3,cv::Scalar(0,250, 255),-1);
+		  }
+	      
+	    }
+
+	    cv::Mat correspondence_rev =  correspondence.clone();
+	    
+	    
+	    
+// 	    for ( unsigned int i = 0; i < poseUpdate.AssociateData.DetectionToModelCorrespondences.size() ; i++ ) { 
+// 		cv::Point p1(poseUpdate.AssociateData.DetectionToModelCorrespondences[i].first[0], poseUpdate.AssociateData.DetectionToModelCorrespondences[i].first[1]);
+// 		cv::Point p2(poseUpdate.AssociateData.DetectionToModelCorrespondences[i].second[0], poseUpdate.AssociateData.DetectionToModelCorrespondences[i].second[1]);
+// 		cv::line( correspondence,p1,p2,  cv::Scalar(24,85,200), 2, 8 );
+// 	    }
+// 
+// 	    for ( unsigned int i = 0; i < poseUpdate.AssociateData.DetectionToModelOutliers.size() ; i++ ) { 
+// 		cv::Point p1(poseUpdate.AssociateData.DetectionToModelOutliers[i][0], poseUpdate.AssociateData.DetectionToModelOutliers[i][1]);
+// 		cv::circle(correspondence,p1 ,8 ,cv::Scalar(0,0,0),2);
+// 
+// 	    }
+
+	    
+	   for ( unsigned int i = 0; i < AssociateData.DetectionToModelCorrespondences.size() ; i++ ) { 
+		cv::Point p1(AssociateData.DetectionToModelCorrespondences[i].first[0], AssociateData.DetectionToModelCorrespondences[i].first[1]);
+		cv::Point p2(AssociateData.DetectionToModelCorrespondences[i].second[0], AssociateData.DetectionToModelCorrespondences[i].second[1]);
+		cv::line( correspondence,p1,p2,  cv::Scalar(24,85,200), 2, 8 );
+	    }
+
+	    for ( unsigned int i = 0; i < AssociateData.DetectionToModelOutliers.size() ; i++ ) { 
+		cv::Point p1(AssociateData.DetectionToModelOutliers[i][0], AssociateData.DetectionToModelOutliers[i][1]);
+		cv::circle(correspondence,p1 ,8 ,cv::Scalar(0,0,0),2);
+
+	    }
+
+	    
+	    
+
+      
+// 	  std::ostringstream ss0, ss1,ss2;
+// 	  ss0<<"Dist confidence:    "<< dist_cnf;
+// 	  ss1<<"Num confidence:     "<< num_cnf;
+// 	  ss2<<"Sum of confidence:  "<< conf;
+// 	
+// 	  cv::putText(correspondence,ss0.str(), cv::Point(50,30),cv::FONT_HERSHEY_TRIPLEX,0.5,cv::Scalar(0,0,0),1);
+// 	  cv::putText(correspondence,ss1.str(), cv::Point(50,50),cv::FONT_HERSHEY_TRIPLEX,0.5,cv::Scalar(0,0,0),1);
+// 	  cv::putText(correspondence,ss2.str(), cv::Point(50,70),cv::FONT_HERSHEY_TRIPLEX,0.5,cv::Scalar(0,0,0),1);
 	  
 	  
-	}
-	
-	
+// 	    for ( unsigned int i = 0; i < poseUpdate.AssociateData.ModelToDetectionCorrespondences.size() ; i++ ) { 
+// 	        cv::Point p1(poseUpdate.AssociateData.ModelToDetectionCorrespondences[i].first[0], poseUpdate.AssociateData.ModelToDetectionCorrespondences[i].first[1]);
+// 	        cv::Point p2(poseUpdate.AssociateData.ModelToDetectionCorrespondences[i].second[0], poseUpdate.AssociateData.ModelToDetectionCorrespondences[i].second[1]);
+// 		cv::line( correspondence_rev, p1,p2,  cv::Scalar(24,85,200), 2, 8 );
+// 	    }
+// 	    
+// 	   for ( unsigned int i = 0; i < poseUpdate.AssociateData.ModelToDetectionOutliers.size() ; i++ ) { 
+// 	        cv::Point p1(poseUpdate.AssociateData.ModelToDetectionOutliers[i][0], poseUpdate.AssociateData.ModelToDetectionOutliers[i][1]);
+// 		cv::circle(correspondence_rev, p1 ,8 ,cv::Scalar(0,0,0),2);
+//     
+// 	   }
+	   
+	    for ( unsigned int i = 0; i < AssociateData.ModelToDetectionCorrespondences.size() ; i++ ) { 
+	        cv::Point p1(AssociateData.ModelToDetectionCorrespondences[i].first[0], AssociateData.ModelToDetectionCorrespondences[i].first[1]);
+	        cv::Point p2(AssociateData.ModelToDetectionCorrespondences[i].second[0], AssociateData.ModelToDetectionCorrespondences[i].second[1]);
+		cv::line( correspondence_rev, p1,p2,  cv::Scalar(24,85,200), 2, 8 );
+	    }
+	    
+	   for ( unsigned int i = 0; i < AssociateData.ModelToDetectionOutliers.size() ; i++ ) { 
+	        cv::Point p1(AssociateData.ModelToDetectionOutliers[i][0], AssociateData.ModelToDetectionOutliers[i][1]);
+		cv::circle(correspondence_rev, p1 ,8 ,cv::Scalar(0,0,0),2);
+    
+	   }
+	   
+	   
+	    
+
+	    
+	   
+          sensor_msgs::Image img_out5;
+	  img_out5.header = CameraFrame.header;;
+	  img_out5.height = siY;
+	  img_out5.width = siX;
+	  img_out5.step = 3*siX;
+  // 	    img_out5.is_bigendian = img->is_bigendian;
+	  img_out5.encoding = std::string("bgr8");
+	  img_out5.data.assign(correspondence.datastart, correspondence.dataend);
+	  image_pub_5.publish(img_out5);
+         
+         
+     
+	  sensor_msgs::Image img_out6;
+	  img_out6.header = CameraFrame.header;;
+	  img_out6.height = siY;
+	  img_out6.width = siX;
+	  img_out6.step = 3*siX;
+  // 	    img_out6.is_bigendian = img->is_bigendian;
+	  img_out6.encoding = std::string("bgr8");
+	  img_out6.data.assign(correspondence_rev.datastart, correspondence_rev.dataend);
+	  image_pub_6.publish(img_out6);
+    }
+    
+    
+    
+    
+    
 
 	
 // 	//HoughLines
-	if(params.debug.showHoughLines->get()){
-	    cv::Mat houghLines_(siY,siX,CV_8UC3,cv::Scalar(150, 150, 150));
-	    std::ostringstream ss;
-            ss <<"Line Num: "<< LineFinder.LinesOnImg.size();
-		cv::putText(houghLines_,ss.str(), cv::Point(100, 200),
-						   cv::FONT_HERSHEY_TRIPLEX,3,cv::Scalar(0,0,0),2);
-	    for(unsigned int i=0; i <LineFinder.LinesOnImg.size(); ++i ){
-    
-		float r =  rand()*255; 
-		float g =  rand()*255;
-		float b =  rand()*255;
-		cv::Point p1=  cv::Point( LineFinder.LinesOnImg[i].s[0],LineFinder.LinesOnImg[i].s[1] );
-		cv::Point p2=  cv::Point( LineFinder.LinesOnImg[i].e[0],LineFinder.LinesOnImg[i].e[1] );
-		cv::line( houghLines_, p1, p2, cv::Scalar( r, g, b), 5, 0 );
-	      
-	    }
-	    
-	    sensor_msgs::Image img_out3;
-	    img_out3.header =CameraFrame.header;
-	    img_out3.height = siY;
-	    img_out3.width = siX;
-	    img_out3.step = 3*siX;
-// 	    img_out3.is_bigendian = img->is_bigendian;
-	    img_out3.encoding = std::string("bgr8");
-	    img_out3.data.assign(houghLines_.datastart, houghLines_.dataend);
-	    image_pub_3.publish(img_out3);
-	}
-	
-	//showMergedLines
-	if(params.debug.showMergedLines->get()){
-	    cv::Mat MergedLines(siY,siX,CV_8UC3,cv::Scalar(150, 150, 150));
-	    
-	    std::ostringstream ss1,ss2;
-            ss1 <<"Line Num: "<< LineFinder.LinesOnImg_After_Merged.size();
-	    ss2 <<"Meas Conf: "<< LineFinder.MeasConf;
-	    cv::putText(MergedLines,ss1.str(), cv::Point(100, 200),
-						   cv::FONT_HERSHEY_TRIPLEX,3,cv::Scalar(0,0,0),2);
-	    cv::putText(MergedLines,ss2.str(), cv::Point(100, 300),
-					    cv::FONT_HERSHEY_TRIPLEX,3,cv::Scalar(0,0,0),2);
-	  
-	    for(unsigned int i=0; i <LineFinder.LinesOnImg_After_Merged.size(); ++i ){
-    
-		float r =  rand()*255; 
-		float g =  rand()*255;
-		float b =  rand()*255;
-		cv::Point p1=  cv::Point( LineFinder.LinesOnImg_After_Merged[i].s[0],LineFinder.LinesOnImg_After_Merged[i].s[1] );
-		cv::Point p2=  cv::Point( LineFinder.LinesOnImg_After_Merged[i].e[0],LineFinder.LinesOnImg_After_Merged[i].e[1] );
-		cv::line( MergedLines, p1, p2, cv::Scalar( r, g, b), 5, 0 );
-	    }
-	    
-	    sensor_msgs::Image img_out4;
-	    img_out4.header =CameraFrame.header;
-	    img_out4.height = siY;
-	    img_out4.width = siX;
-	    img_out4.step = 3*siX;
-// 	    img_out4.is_bigendian = img->is_bigendian;
-	    img_out4.encoding = std::string("bgr8");
-	    img_out4.data.assign(MergedLines.datastart, MergedLines.dataend);
-	    image_pub_4.publish(img_out4);      
-	}
-	
-
+// 	if(params.debug.showHoughLines->get()){
+// 	    cv::Mat houghLines_(siY,siX,CV_8UC3,cv::Scalar(150, 150, 150));
+// 	    std::ostringstream ss;
+//             ss <<"Line Num: "<< LineFinder.LinesOnImg.size();
+// 		cv::putText(houghLines_,ss.str(), cv::Point(100, 200),
+// 						   cv::FONT_HERSHEY_TRIPLEX,3,cv::Scalar(0,0,0),2);
+// 	    for(unsigned int i=0; i <LineFinder.LinesOnImg.size(); ++i ){
+//     
+// 		float r =  rand()*255; 
+// 		float g =  rand()*255;
+// 		float b =  rand()*255;
+// 		cv::Point p1=  cv::Point( LineFinder.LinesOnImg[i].s[0],LineFinder.LinesOnImg[i].s[1] );
+// 		cv::Point p2=  cv::Point( LineFinder.LinesOnImg[i].e[0],LineFinder.LinesOnImg[i].e[1] );
+// 		cv::line( houghLines_, p1, p2, cv::Scalar( r, g, b), 5, 0 );
+// 	      
+// 	    }
+// 	    
+// 	    sensor_msgs::Image img_out3;
+// 	    img_out3.header =CameraFrame.header;
+// 	    img_out3.height = siY;
+// 	    img_out3.width = siX;
+// 	    img_out3.step = 3*siX;
+// // 	    img_out3.is_bigendian = img->is_bigendian;
+// 	    img_out3.encoding = std::string("bgr8");
+// 	    img_out3.data.assign(houghLines_.datastart, houghLines_.dataend);
+// 	    image_pub_3.publish(img_out3);
+// 	}
+// 	
+// 	//showMergedLines
+// 	if(params.debug.showMergedLines->get()){
+// 	    cv::Mat MergedLines(siY,siX,CV_8UC3,cv::Scalar(150, 150, 150));
+// 	    
+// 	    std::ostringstream ss1,ss2;
+//             ss1 <<"Line Num: "<< LineFinder.LinesOnImg_After_Merged.size();
+// 	    ss2 <<"Meas Conf: "<< LineFinder.MeasConf;
+// 	    cv::putText(MergedLines,ss1.str(), cv::Point(100, 200),
+// 						   cv::FONT_HERSHEY_TRIPLEX,3,cv::Scalar(0,0,0),2);
+// 	    cv::putText(MergedLines,ss2.str(), cv::Point(100, 300),
+// 					    cv::FONT_HERSHEY_TRIPLEX,3,cv::Scalar(0,0,0),2);
+// 	  
+// 	    for(unsigned int i=0; i <LineFinder.LinesOnImg_After_Merged.size(); ++i ){
+//     
+// 		float r =  rand()*255; 
+// 		float g =  rand()*255;
+// 		float b =  rand()*255;
+// 		cv::Point p1=  cv::Point( LineFinder.LinesOnImg_After_Merged[i].s[0],LineFinder.LinesOnImg_After_Merged[i].s[1] );
+// 		cv::Point p2=  cv::Point( LineFinder.LinesOnImg_After_Merged[i].e[0],LineFinder.LinesOnImg_After_Merged[i].e[1] );
+// 		cv::line( MergedLines, p1, p2, cv::Scalar( r, g, b), 5, 0 );
+// 	    }
+// 	    
+// 	    sensor_msgs::Image img_out4;
+// 	    img_out4.header =CameraFrame.header;
+// 	    img_out4.height = siY;
+// 	    img_out4.width = siX;
+// 	    img_out4.step = 3*siX;
+// // 	    img_out4.is_bigendian = img->is_bigendian;
+// 	    img_out4.encoding = std::string("bgr8");
+// 	    img_out4.data.assign(MergedLines.datastart, MergedLines.dataend);
+// 	    image_pub_4.publish(img_out4);      
+// 	}
+// 	
+// 
+//         
+//         
+// 	//matching result
+// 	if(params.debug.showAssociateLines->get()){
+// 	    //mark model points and inlier model points on rviz
+// 	    visualization_msgs::MarkerArray associateLines;  
+// 	    
+// 		visualization_msgs::Marker m4, m5;
+// 		m4.header.frame_id = "world";
+// 		m4.header.stamp = CameraFrame.header.stamp; 
+// 		m4.action = visualization_msgs::Marker::ADD;
+// 	        m4.pose.orientation.x = 0;m4.pose.orientation.y = 0;m4.pose.orientation.z = 0; m4.pose.orientation.w= 1.0;
+// 		m4.ns = "lines";
+// 		m4.id = 4;
+// 		m4.pose.position.x=0;m4.pose.position.y=0;m4.pose.position.z=0;
+// 		m4.type = visualization_msgs::Marker::LINE_LIST;
+// 		m4.scale.x = 0.05;;
+// 		m4.color.a = 1.0;  m4.color.r = 0.2; m4.color.g = 0.2; m4.color.b = 0.2;
+// 		m4.points.clear();
+// 
+// 
+// 		for( size_t i = 0; i <  lineMatcher.AssociationLines.size(); ++i ) {
+// 		  geometry_msgs::Point p;
+// 		  p.x = lineMatcher.AssociationLines[i].s_w[0];
+// 		  p.y = lineMatcher.AssociationLines[i].s_w[1];
+// 		  p.z = lineMatcher.AssociationLines[i].s_w[2];
+// 		  m4.points.push_back(p);
+// 
+// 		  p.x = lineMatcher.AssociationLines[i].e_w[0];
+// 		  p.y = lineMatcher.AssociationLines[i].e_w[1];
+// 		  p.z = lineMatcher.AssociationLines[i].e_w[2];
+// 		  m4.points.push_back(p);  
+// 
+// 	          }
+// 		
+// 		
+// 		m5 = m4;
+// 		m5.ns = "MergedLines";
+// 		m5.id = 5;
+// 		m5.scale.x = 0.05; 
+// 		m5.color.a = 1.0;  m5.color.r = 1.0;m5.color.g = 0.2;m5.color.b = 1.0;
+// 		m5.points.clear();
+// 
+// 		for( size_t i = 0; i <  lineMatcher.m_LineBuffer_After_Merge.size(); ++i ) {
+//       
+// 		    geometry_msgs::Point p;
+// 		    p.x = lineMatcher.m_LineBuffer_After_Merge[i].s_w[0];
+// 		    p.y = lineMatcher.m_LineBuffer_After_Merge[i].s_w[1];
+// 		    p.z = lineMatcher.m_LineBuffer_After_Merge[i].s_w[2];
+// 		    m5.points.push_back(p);
+// 
+// 		    p.x = lineMatcher.m_LineBuffer_After_Merge[i].e_w[0];
+// 		    p.y = lineMatcher.m_LineBuffer_After_Merge[i].e_w[1];
+// 		    p.z = lineMatcher.m_LineBuffer_After_Merge[i].e_w[2];
+// 		    m5.points.push_back(p);  
+// 
+// 		}
+// 		
+// 		associateLines.markers.push_back( m4 );
+// 		associateLines.markers.push_back( m5 );
+// 	  
+// 	  
+// 	     associateLines_pub.publish( associateLines );
+// 	}
         
         
-	//matching result
-	if(params.debug.showAssociateLines->get()){
-	    //mark model points and inlier model points on rviz
-	    visualization_msgs::MarkerArray associateLines;  
-	    
-		visualization_msgs::Marker m4, m5;
-		m4.header.frame_id = "world";
-		m4.header.stamp = CameraFrame.header.stamp; 
-		m4.action = visualization_msgs::Marker::ADD;
-	        m4.pose.orientation.x = 0;m4.pose.orientation.y = 0;m4.pose.orientation.z = 0; m4.pose.orientation.w= 1.0;
-		m4.ns = "lines";
-		m4.id = 4;
-		m4.pose.position.x=0;m4.pose.position.y=0;m4.pose.position.z=0;
-		m4.type = visualization_msgs::Marker::LINE_LIST;
-		m4.scale.x = 0.05;;
-		m4.color.a = 1.0;  m4.color.r = 0.2; m4.color.g = 0.2; m4.color.b = 0.2;
-		m4.points.clear();
-
-
-		for( size_t i = 0; i <  lineMatcher.AssociationLines.size(); ++i ) {
-		  geometry_msgs::Point p;
-		  p.x = lineMatcher.AssociationLines[i].s_w[0];
-		  p.y = lineMatcher.AssociationLines[i].s_w[1];
-		  p.z = lineMatcher.AssociationLines[i].s_w[2];
-		  m4.points.push_back(p);
-
-		  p.x = lineMatcher.AssociationLines[i].e_w[0];
-		  p.y = lineMatcher.AssociationLines[i].e_w[1];
-		  p.z = lineMatcher.AssociationLines[i].e_w[2];
-		  m4.points.push_back(p);  
-
-	          }
-		
-		
-		m5 = m4;
-		m5.ns = "MergedLines";
-		m5.id = 5;
-		m5.scale.x = 0.05; 
-		m5.color.a = 1.0;  m5.color.r = 1.0;m5.color.g = 0.2;m5.color.b = 1.0;
-		m5.points.clear();
-
-		for( size_t i = 0; i <  lineMatcher.m_LineBuffer_After_Merge.size(); ++i ) {
-      
-		    geometry_msgs::Point p;
-		    p.x = lineMatcher.m_LineBuffer_After_Merge[i].s_w[0];
-		    p.y = lineMatcher.m_LineBuffer_After_Merge[i].s_w[1];
-		    p.z = lineMatcher.m_LineBuffer_After_Merge[i].s_w[2];
-		    m5.points.push_back(p);
-
-		    p.x = lineMatcher.m_LineBuffer_After_Merge[i].e_w[0];
-		    p.y = lineMatcher.m_LineBuffer_After_Merge[i].e_w[1];
-		    p.z = lineMatcher.m_LineBuffer_After_Merge[i].e_w[2];
-		    m5.points.push_back(p);  
-
-		}
-		
-		associateLines.markers.push_back( m4 );
-		associateLines.markers.push_back( m5 );
-	  
-	  
-	     associateLines_pub.publish( associateLines );
-	}
         
         
-        
-        
-        //correspondence
-        if(params.debug.showCorrespondence->get()){
-	    cv::Mat correspondence(cv::Size(siX,siY),CV_8UC3,cv::Scalar(150, 150, 150));
-	    //draw detected points
-	    for ( unsigned int i = 0; i < NodeFinder.undistortedNodeSamplePoins.size() ; i++ ) { 
-		cv::circle(correspondence,NodeFinder.undistortedNodeSamplePoins[i], 4, cv::Scalar(0, 10, 200),-1);
-	    }
-	    //draw model projected points (distored)
-	    for ( unsigned int i = 0; i <CameraFrame.forw_Proj.ModelPointsInImg.size() ; i++ ) { 
-		cv::circle(correspondence, CameraFrame.forw_Proj.ModelPointsInImg[i], 4, cv::Scalar(0,250, 255),-1);
-	    }
 
-    //         //draw inliers and associate lines
-	    for ( int i = 0; i <pointMatcher.inlierNum; i++ ) { 
-		//images detected points
-		cv::circle(correspondence, cv::Point(pointMatcher.correspondences[i*8 + 2], pointMatcher.correspondences[i*8 + 3]), 
-					  4, cv::Scalar(0, 250, 0),-1);
-		//projected model points
-		cv::circle(correspondence, cv::Point(pointMatcher.correspondences[i*8 + 6], pointMatcher.correspondences[i*8 + 7]), 
-					      5, cv::Scalar(100, 100, 200),2);
-		// draw lines between input points to transformed points
-		cv::line( correspondence, cv::Point(pointMatcher.correspondences[i*8 + 0], pointMatcher.correspondences[i*8 + 1] ),
-					      cv::Point(pointMatcher.correspondences[i*8 + 2], pointMatcher.correspondences[i*8 + 3]), 
-					      cv::Scalar(200,85,20), 1, 8 );
-		// draw lines between transformed points to closest model points
-		cv::line( correspondence, cv::Point(pointMatcher.correspondences[i*8 + 2], pointMatcher.correspondences[i*8 + 3] ),
-					      cv::Point(pointMatcher.correspondences[i*8 + 6], pointMatcher.correspondences[i*8 + 7]), 
-					      cv::Scalar(24,85,200), 1, 8 );
-	    }
-    
-	 
-	      std::ostringstream ss0, ss1,ss2;
-// 	      ss0<<"Dist confidence:    "<< dist_cnf;
-// 	      ss1<<"Num confidence:     "<< num_cnf;
-// 	      ss2<<"Sum of confidence:  "<< num_cnf;
-	    
-// 	      cv::putText(correspondence,ss0.str(), cv::Point(50,100),cv::FONT_HERSHEY_TRIPLEX,2,cv::Scalar(0,0,0),2);
-//               cv::putText(correspondence,ss1.str(), cv::Point(50,150),cv::FONT_HERSHEY_TRIPLEX,2,cv::Scalar(0,0,0),2);
-// 	      cv::putText(correspondence,ss2.str(), cv::Point(50,200),cv::FONT_HERSHEY_TRIPLEX,2,cv::Scalar(0,0,0),2);
-	      
-
-	    for(unsigned int i=0; i <CameraFrame.forw_Proj.Field_Lines_Img.size(); ++i ){
-	        
-		cv::Point p1=  cv::Point( CameraFrame.forw_Proj.Field_Lines_Img[i].s[0],CameraFrame.forw_Proj.Field_Lines_Img[i].s[1] );
-		cv::Point p2=  cv::Point( CameraFrame.forw_Proj.Field_Lines_Img[i].e[0],CameraFrame.forw_Proj.Field_Lines_Img[i].e[1] );
-		cv::line( correspondence, p1, p2, cv::Scalar(0,250, 255), 2, 0 );
-	    }
-
-	  
-	    sensor_msgs::Image img_out6;
-	    img_out6.header = CameraFrame.header;;
-	    img_out6.height = siY;
-	    img_out6.width = siX;
-	    img_out6.step = 3*siX;
-// 	    img_out6.is_bigendian = img->is_bigendian;
-	    img_out6.encoding = std::string("bgr8");
-	    img_out6.data.assign(correspondence.datastart, correspondence.dataend);
-	    image_pub_6.publish(img_out6);
-	}
 	
 
 // 	  // **************************************** //
@@ -917,7 +1029,7 @@ int main( int argc, char** argv ) {
 	      
 	  fpsData = (0.9 * fpsData) + (0.1 * (1000000000l / timer.elapsed().wall));
 	  time_msg.data = fpsData;
-	  cout<< fpsData<<endl;
+// 	  cout<< fpsData<<endl;
 	 
 	  
 // 	  if(params.debug.publishTime->get()){

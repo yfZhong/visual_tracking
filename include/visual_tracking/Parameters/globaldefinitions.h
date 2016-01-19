@@ -12,8 +12,9 @@
 #define UNDISTOTED_IMAGE_HEIGHT 1251
 
 #define SUB_SAMPLING_PARAMETER 4
-#define SUB_SAMPLING_WIDTH ORG_IMAGE_WIDTH/SUB_SAMPLING_PARAMETER
-#define SUB_SAMPLING_HEIGHT ORG_IMAGE_HEIGHT/SUB_SAMPLING_PARAMETER
+#define SUB_SAMPLING_WIDTH UNDISTOTED_IMAGE_WIDTH/SUB_SAMPLING_PARAMETER
+#define SUB_SAMPLING_HEIGHT UNDISTOTED_IMAGE_HEIGHT/SUB_SAMPLING_PARAMETER
+
 // #define SUB_SAMPLING_NUM_PIXELS SUB_SAMPLING_WIDTH*SUB_SAMPLING_HEIGHT
 // #define MAX_STACK_SIZE (SUB_SAMPLING_WIDTH*SUB_SAMPLING_HEIGHT)
 
@@ -43,26 +44,6 @@
 #define BLACK_C	2
 
 
-// #define TEENSIZE_FIELD 0
-// #define BONN_FIELD 1
-// #if TEENSIZE_FIELD
-// const double A = 9;
-// const double B = 6;
-// const double E = 1;
-// const double F = 5;
-// const double G = 2.1;
-// const double H = 1.50;
-// const double D = 2.6;
-// #elif BONN_FIELD
-// const double A = 5.45;
-// const double B = 4.10;
-// const double E = 0.60;
-// const double F = 3.40;
-// const double G = 1.30;
-// const double H = 1.20;
-// const double D = 2.6;
-// #endif
-
 
 
 namespace vision
@@ -78,6 +59,8 @@ namespace vision
 	   double H ;
 	   double D ;
 	};
+	
+	
 };
 
 

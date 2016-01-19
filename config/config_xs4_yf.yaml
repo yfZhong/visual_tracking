@@ -65,7 +65,6 @@ vision:
     LineWidth: 19
     MaxDist: 400
     MaxLineSegDistance: 50
-    MaxLineSegDistanceForJoint: 60
     MaxProjectedDistance: 30
     MergeJointDist: 1000
     MinCmpLineLength: 10

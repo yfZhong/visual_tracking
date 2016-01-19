@@ -1,0 +1,71 @@
+<!--launch file-->
+
+<launch>
+	<param name="use_sim_time" value="true" />
+	<!--include file="$(find launch)/config/server.launch" /-->
+	
+	 <!--arg name="robot_name" value="$(optenv NIMBRO_ROBOT_NAME)" /-->
+	 <arg name="robot_name" value="xs4_yf_bonnfield2" />
+	 
+
+        <node name="config_server" pkg="config_server" type="config_server" output="screen" required="true">
+                <param name="config_path" value="$(find visual_tracking)/config" />
+                <param name="robot_name" value="$(arg robot_name)" />
+        </node>
+	
+        
+	
+       <!-- start the vision localization node -->
+	<node pkg="visual_tracking" type="visual_tracking_node" name="visual_tracking" output="screen"> <!--launch-prefix="xterm -e gdb **args"-->
+	</node>
+	
+	
+		        <!-- start bagfile -->
+        <node name="rosbag" pkg="rosbag" type="play" args="--clock -l -r 0.5 /home/yvonne/bags/12.04/06.bag"> 
+         </node>
+	
+	
+	
+	 <!-- start vis -->
+	<!--node name="image_view3" pkg="image_view" type="image_view" respawn="false" output="screen">
+            <remap from="image" to="/vision/rgbout"/>
+        </node>
+  	
+        <node pkg="image_view" name="view_image1" type="image_view" >
+	      <remap from="image" to="/vision/houghLines_inliers_outliers"/>
+	</node > 
+	
+	<node pkg="image_view" name="view_image2" type="image_view" >
+	      <remap from="image" to="/vision/correspondence"/>
+	</node > 
+
+
+	<node pkg="image_view" name="view_image3" type="image_view" >
+	      <remap from="image" to="/vision/skeletonPixels"/>
+	</node > 
+	
+	<node pkg="image_view" name="view_image4" type="image_view" >
+	      <remap from="image" to="/vision/localTopValues"/>
+	</node --> 
+
+	
+	<!--node pkg="image_view" name="view_image5" type="image_view" >
+	      <remap from="image" to="/projected_image"/>
+	</node --> 
+
+   
+   <!--node pkg="rosbag" type="record" name="recordBag" output="screen" args="record /vision/out -O /home/yvonne/bags/test/center_of_field{7}_out.bag"/!-->
+    
+  
+  
+   <!--node name="extract" pkg="image_view" type="extract_images" respawn="false" output="screen" cwd="ROS_HOME">
+    <remap from="image" to="/vision/out"/>
+  </node!-->
+    
+     <!--node pkg="rviz" name = "rviz1" type = "rviz"   args="-d $(find vision_6d_pose)/config/vision.rviz">
+    </node-->
+    
+	<!--node name="rqt" pkg="rqt_gui" type="rqt_gui" required="true" respawn="false" output="screen" /-->
+	
+	<!--launch-prefix="xterm -e gdb --><!--args"-->
+</launch>
