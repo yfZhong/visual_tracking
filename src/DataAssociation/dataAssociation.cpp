@@ -17,14 +17,18 @@
    
      DetectionToModelCorrespondences.clear();
      DetectionToModelOutliers.clear();
+
+     
      
      LinearGraph_Buffer  * m_LinearGraph_Buffer = NodeFinder.m_LinearGraph_Buffer;
      ModelLine_Buffer  * m_ModelLine_Buffer= CamFrm.forw_Proj.m_ModelLine_Buffer;
      
+          if( m_LinearGraph_Buffer->size()==0 ||  m_ModelLine_Buffer->size() ==0){return;}
+     
      int MaxAngDiff = params.dataAssociation.MaxAngDiff->get();
      float MaxErrorForInlier = params.dataAssociation.MaxErrorForInlier->get();
      float MinCompLength = params.graphNode._MinCmpLineLength->get();
-     float MaxAngleChange= params.dataAssociation._MaxAngleChange->get();
+     float MaxAngleAvgChange= params.dataAssociation._MaxAngleChange->get();
      
       LinearGraph_Buffer::iterator it_1;
       ModelLine_Buffer::iterator it_2;
@@ -80,7 +84,7 @@
 		  }
 	      }
 	      else{
-// 		 if((*it_1).undistortedAngleChangeAvg <MaxAngleChange && points.size()>5 ){ continue;}
+// 		 if((*it_1).undistortedAngleChangeAvg <MaxAngleAvgChange && points.size()>15 ){ continue;}
 		
 		  vector<Line>  &UndistortedLines = (*it_2).UndistortedLines;
 		  // for each point, project to the line seg with shotest Point2LineSegDistance(
@@ -115,7 +119,7 @@
 		  
 		  float num_anglediff_outside_range_Pct = float(num_anglediff_outside_range)/float(points.size());
 		
-	          if( compError < minCompError  && num_anglediff_outside_range_Pct<= 0.5){
+	          if( compError < minCompError  /*&& num_anglediff_outside_range_Pct<= 0.5*/){
 			minCompError = compError; 
 			minComp_j = j;
 		  }
@@ -125,9 +129,10 @@
 	  
           float maxerror_tmp= MaxErrorForInlier;
 	  
-	  if(points.size()>20 &&  undistortedAngleChangeAvg <10){maxerror_tmp += 3*maxerror_tmp; }
-	  else if (points.size()>=10){maxerror_tmp += 2*maxerror_tmp ;}
-	  else if (points.size()>=5){maxerror_tmp += maxerror_tmp ;}
+	  if(points.size()>20 ){maxerror_tmp += 100*maxerror_tmp; }
+	  else if (points.size()>=8){maxerror_tmp += 70*maxerror_tmp ;} 
+	  else if (points.size()>=5 &&  undistortedAngleChangeAvg <8){maxerror_tmp += 4* maxerror_tmp ;}
+	  else if (points.size()>=5){ maxerror_tmp += 2* maxerror_tmp;} 
 	  
 	
 	 
@@ -212,6 +217,8 @@
      
      LinearGraph_Buffer  * m_LinearGraph_Buffer = NodeFinder.m_LinearGraph_Buffer;
      ModelLine_Buffer  * m_ModelLine_Buffer= CamFrm.forw_Proj.m_ModelLine_Buffer;
+     
+      if( m_LinearGraph_Buffer->size()==0 ||  m_ModelLine_Buffer->size() ==0){return;}
     
      float MinLength_Model = params.graphNode._MinCmpLineLength->get();
      int MaxAngDiff = params.dataAssociation.MaxAngDiff->get();
@@ -265,7 +272,7 @@
 			
 			for(unsigned int  l = 0; l<lines.size(); l++) {
 			      
-			      if( m_Math::AngDif(point_ang,  lines[l].ang)>MaxAngDiff){continue;}
+// 			      if( m_Math::AngDif(point_ang,  lines[l].ang)>MaxAngDiff){continue;}
 			    
 			      float dist_tmp= m_Math::Point2LineSegDistance(UndistortedPoints[pi], lines[l]);
 			
@@ -305,6 +312,9 @@
       
       MTDError = error;
 }
+ 
+ 
+
  
  
  

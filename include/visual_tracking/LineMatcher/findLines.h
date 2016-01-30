@@ -12,6 +12,7 @@
 #include <Eigen/Eigenvalues>
 #include <queue>
 #include <utility>      // std::pair
+#include <ros/ros.h>
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -31,6 +32,8 @@
 
 #include <visual_tracking/IcpPointMatcher/kdtree.h>
 // #include <visual_tracking/LineMatcher/findNodes.h>
+#include <gait_msgs/GaitOdom.h>
+#include <robotcontrol/RobotHeading.h>
 
 
 using namespace std;
@@ -80,7 +83,7 @@ namespace vision
 		
 		void findSkeletons(FrameGrabber & CamFrm);
 // 		void applyLineFilter(/*in*/cv:: Mat Brightness_Channel,/*out*/std::vector< float > & weightedWhiteValues);
-		void applyLineFilter(/*in*/cv:: Mat Brightness_Channel,/*out*/float ( & weightedWhiteValues )[ H ][ W ]  );
+		void applyLineFilter(/*in*/cv:: Mat& Brightness_Channel,/*in*/cv:: Mat & greenBinary,/*out*/float ( & weightedWhiteValues )[ H ][ W ]  );
 		void RetrieveSkeleton (/* in */cv:: Mat &fieldConvectHull, /* in */ const float ( & weightedWhiteValues )[ H ][ W ]  , /* out */ std::vector<cv::Point> &detectedPoins);
 		void removeObstacleBoarder (/* in */ vector< vector <cv::Point > > ObstacleContours  ,/* in_out */ std::vector<pair<cv::Point, int> > & _detectedPoinsWithType );
 		
@@ -121,7 +124,37 @@ namespace vision
 		
 	
 		double fpsData;
-	       
+		
+		ros::NodeHandle nodeHandle;
+		ros::Subscriber odom_sub;
+		void getOdom(const gait_msgs::GaitOdomConstPtr & msg);
+	        Point3d curOdom;
+		
+		robotcontrol::RobotHeading headingData;
+		ros::Subscriber heading_sub_robotstate;
+	
+		double headingOffset;
+		double getHeading();
+		double pre_heading;
+		double heading_speed;
+		int count;
+		
+	        void handleHeadingData( const robotcontrol::RobotHeadingConstPtr& msg) //in radian
+		{
+			headingData=*msg;
+			if(count ==0 ){ heading_speed = 0; count++; }
+			else{ heading_speed = m_Math::RadianAngleDiff(getHeading() , pre_heading);  }
+			pre_heading = getHeading();
+		
+		}
+		
+		int num_change_min_ske;
+		int delta1;
+		int mean_b;
+		int min_skele_shift;
+		
+		
+		
 	};
 
 

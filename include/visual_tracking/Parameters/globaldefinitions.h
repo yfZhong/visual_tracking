@@ -42,7 +42,7 @@
 #define BALL_C 	0
 #define GOAL_C	1
 #define BLACK_C	2
-
+#define WHITE_C	3
 
 
 

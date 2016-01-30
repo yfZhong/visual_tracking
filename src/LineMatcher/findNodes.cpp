@@ -1463,7 +1463,7 @@ void FindNodes::findNodeGraph(FrameGrabber & CamFrm){
       
 
          connectComps();
-// //         
+//         
 	 updateUndistoredLines();
 //         
 // 	
@@ -1472,12 +1472,12 @@ void FindNodes::findNodeGraph(FrameGrabber & CamFrm){
 	 updateNodeTangentLine();
 	 
 	 MergeMoreComps();
-          PrintReacherableComp("reachableComp1");
+//           PrintReacherableComp("reachableComp1");
 	 removeSmallComp();
 	 
 	 updateCompPoints();
 	 
-	 PrintReacherableComp("reachableComp");
+// 	 PrintReacherableComp("reachableComp");
   
   
 }
@@ -1530,6 +1530,8 @@ void FindNodes::FindCloseNodes2 ( /* in */const float ( & weightedWhiteValues )[
     rad = max<int>( 5, params.graphNode._NeighborRadius->get() );
     int MaxCloseNum = params.graphNode._MaxCloseNum->get();
     int  MinAngle = params.graphNode._MinAngle->get();
+    
+    
 //     rad = rad *rad  ;
 
     // * For all nodes do .... * //
@@ -1544,6 +1546,10 @@ void FindNodes::FindCloseNodes2 ( /* in */const float ( & weightedWhiteValues )[
 	if ( it->num_connected > 2 ) { // [1]
 	    continue;
 	}
+// 	if ( it->num_connected > MAX_CONN ) { // [1]
+// 	    continue;
+// 	}
+// 	
 	// * Continue, if degree(node)=2 AND angle too large. * //
 	if ( ( it->num_connected == 2 ) &&
 	    ( angle_nodes( it->connected[ 0 ], i, it->connected[ 1 ] ) > 90 ) ) { // [1]
@@ -1565,10 +1571,23 @@ void FindNodes::FindCloseNodes2 ( /* in */const float ( & weightedWhiteValues )[
 	    // * If distance between node_i and node_j is too large or if they are connected, continue. * //
 	   
 	    dist = distance_nodes2( i, j );
+// 	    float dist_closest =  m_Math::getTwoRectClosestDist(Rectangles[i],Rectangles[j]);
+	    float dist_closest = dist - std::max(Rectangles[i].rect.width /2, Rectangles[i].rect.height/2) 
+	                                       - std::max(Rectangles[j].rect.width /2, Rectangles[j].rect.height/2);
+	    if(dist_closest<0){ dist_closest =0; }
 // 	    dist = distance_nodes( i, j );
-	    if ( dist > rad ) { // [2]
+	  
+	     
+	    float rad_tmp = rad;
+	    if(it->y_pos < m_Top + 0.3*(H-m_Top) ){rad_tmp -= 3;}
+// 	    if ( dist > rad_tmp ) { // [2]
+// 		continue;
+// 	    }
+	    
+	    if ( dist_closest > rad_tmp ) { // [2]
 		continue;
 	    }
+	    
 	    if ( is_connected( i, j ) ) { // [2]
 		continue;
 	    }
@@ -1610,12 +1629,31 @@ void FindNodes::FindCloseNodes2 ( /* in */const float ( & weightedWhiteValues )[
 	    }
 	    
 // 	    float dist =std::max(double (m_Math::getTwoRectClosestDist(Rectangles[i], Rectangles[j])), 0.5);
-	    float area = Rectangles[j].area ;
-            float num_points = Rectangles[j].num_points ;
-	    // * Evaluate the significance (adj) of the new edge. * //
+
+	    float areaj = Rectangles[j].area ;
+	    float num_pointsj = Rectangles[j].num_points ;
+	    
+	    float areai = Rectangles[i].area ;
+	    float num_pointsi = Rectangles[i].num_points ;
+
+	   
+// 	    if((areai > 40 || num_pointsi >10) && (areaj > 40 || num_pointsj >10)){ dist /=4.0; }
+// 	    if((areai > 40 || num_pointsi >10) || (areaj > 40 || num_pointsj >10)){ dist /=2.0; }
+	    
+// 	    else if(area > 25 || num_points >6 ){ dist /=3.0; }
+	    
+
 	    it->close_id[ it->num_close ] = j;
 // 	    it->close_adj[ it->num_close ] = /*fac **/ ( ang - MinAngle ) * black_line_value( weightedWhiteValues, i, j ) / ( dist + 1 );//prefer large ang, small dist, high brightness
-	    it->close_adj[ it->num_close ] = /*fac **/num_points *area *  ( ang - MinAngle ) * black_line_value2( weightedWhiteValues, i, j ) / ( dist + 1  );//prefer large ang, small dist, high brightness
+
+//             it->close_adj[ it->num_close ] = num_pointsi * areai *num_pointsj * areaj * ( ang - MinAngle ) 
+// 	                                  * black_line_value2( weightedWhiteValues, i, j ) / ( dist + 1  );
+					  
+            it->close_adj[ it->num_close ] = num_pointsi * areai *num_pointsj * areaj * ( ang - MinAngle ) 
+	                                  * black_line_value2( weightedWhiteValues, i, j ) / ( dist_closest + 1  ) *0.0001;
+// 					  //prefer large ang, small dist, high brightness
+            if(  it->close_adj[ it->num_close ]<0){ it->close_adj[ it->num_close ] =  std::numeric_limits<int>::max(); }			  		  
+	    
 	    it->num_close++;
 
 	    if ( it->num_close == MaxCloseNum ) { // [2]
@@ -1643,7 +1681,7 @@ void FindNodes::ConnectCloseNodes2 ( /* in */ const float ( & weightedWhiteValue
     int iteration = 0;
 //     int num_ends = 0;
     
-     min_adj = params.graphNode.Min_adj->get();
+     min_adj = params.graphNode._Min_adj->get();
      int  MinAngle = params.graphNode._MinAngle->get();
     // * compute the number of open ends. * //
      Node_Buffer::iterator it;
@@ -1716,14 +1754,14 @@ void FindNodes::ConnectCloseNodes2 ( /* in */ const float ( & weightedWhiteValue
 		    
 		      }
 		}
-
+//                 cout<<adj<<endl;
 		if ( adj > max_adj ) {
 		    max_adj = adj, max_i = i, max_j = j;
 		}
 	    }	    
 	    
 	}
-
+//  cout<<"                                             "<<max_adj<<endl;
 //         cout<<"max_adj       "<<max_adj<<endl;
 	
 	// * If the best candidate is good enough, insert it. * //
@@ -1759,7 +1797,7 @@ void FindNodes::ConnectCloseNodes2 ( /* in */ const float ( & weightedWhiteValue
 	    }
 	    iteration++;
 	}
-    } while ( (max_adj > min_adj || iteration < 2 ) && iter_count<1000000000);
+    } while ( (max_adj > min_adj || iteration < 2 ) && iter_count<10000000);
     
 //       cout<<"iter_count"<<iter_count<<"            "<<max_adj<<endl;
 
@@ -2314,7 +2352,7 @@ void FindNodes::MergeMoreComps(){
       bool NoUpdate = false;
       
       int iter_count=0;
-      while (!NoUpdate && iter_count<1000000){
+      while (!NoUpdate && iter_count<10000){
 	    iter_count++;
 	
 	    LinearGraph_Buffer::iterator it_1, it_2;
@@ -2355,13 +2393,14 @@ void FindNodes::MergeMoreComps(){
 			  
 			  int count=0;
 			  int nodeId1, nodeId2;
+		
 			  for(unsigned int i=0; i< it_1->reachableNodeIds.size();++i){
 			    
 			    int id1 = it_1->reachableNodeIds[i];
 			    Vec2i P1((*m_NodeBuffer)[id1].undistorted_x_pos, (*m_NodeBuffer)[id1].undistorted_y_pos);
 			    
 				for(unsigned int j=0; j< it_2->TangentLines.size();++j){
-				    count++;
+				    
 				    Line l2 = it_2->TangentLines[j];
 				    
 				    projectedDistAvg += m_Math::GetProjectiveDistance(P1, l2);
@@ -2375,16 +2414,24 @@ void FindNodes::MergeMoreComps(){
 					nodeId1 =id1; 
                                         nodeId2 =id2;
 				    }
+				    if(m_Math::isProjectedInsideLineSeg(P1, l2)){count++;}
 				  
 				}
 			  
 			  }
 			  
-			  projectedDistAvg = projectedDistAvg/float( count );
+			  projectedDistAvg = projectedDistAvg/float( it_1->reachableNodeIds.size() * it_2->TangentLines.size() );
+			  if( count == (  it_1->reachableNodeIds.size())){ continue;}
+			  if( it_1->reachableNodeIds.size() > 5 && count>= ( 0.6 * it_1->reachableNodeIds.size())){ continue;}
+			  
 			  if(projectedDistAvg >_MaxAvgProjectedDistance || closestDist >_MaxDistance_tmp ){ continue;}
+			 
+			  
+			  
 			 
 			  projectedDistAvg=0; count =0;
 			  closestDist = std::numeric_limits<float>::max();
+			  
 					  
 			  for(unsigned int i=0; i< it_2->reachableNodeIds.size();++i){
 			    
@@ -2392,21 +2439,23 @@ void FindNodes::MergeMoreComps(){
 			    Vec2d P2((*m_NodeBuffer)[nodeId].undistorted_x_pos, (*m_NodeBuffer)[nodeId].undistorted_y_pos);
 			    
 				for(unsigned int j=0; j< it_1->TangentLines.size();++j){
-				   count++;
-				  Line l1 = it_1->TangentLines[j];
-				  projectedDistAvg += m_Math::GetProjectiveDistance(P2, l1);
-				
-// 				  Vec2i midP = l1.getMidPoint();
-				  int  nidx= it_1->reachableNodeIds[j];
-				  Vec2i midP((*m_NodeBuffer)[nidx].undistorted_x_pos, (*m_NodeBuffer)[nidx].undistorted_y_pos);
-				  float dist_tmp = m_Math::TwoPointDistance(P2,midP);
-				  if( dist_tmp< closestDist ){closestDist = dist_tmp ;}
+// 				  
+				    Line l1 = it_1->TangentLines[j];
+				    projectedDistAvg += m_Math::GetProjectiveDistance(P2, l1);
 				  
-				}
+  // 				  Vec2i midP = l1.getMidPoint();
+				    int  nidx= it_1->reachableNodeIds[j];
+				    Vec2i midP((*m_NodeBuffer)[nidx].undistorted_x_pos, (*m_NodeBuffer)[nidx].undistorted_y_pos);
+				    float dist_tmp = m_Math::TwoPointDistance(P2,midP);
+				    if( dist_tmp< closestDist ){closestDist = dist_tmp ;}
+				    if(m_Math::isProjectedInsideLineSeg(P2, l1)){count++;}
+				  }
 			  
 			  }
 			  
-			  projectedDistAvg = projectedDistAvg/float( count );
+			  projectedDistAvg = projectedDistAvg/float(  it_2->reachableNodeIds.size() * it_1->TangentLines.size() );
+			  if( count == (  it_2->reachableNodeIds.size())){ continue;}
+			   if( it_2->reachableNodeIds.size() > 5 && count>= ( 0.6 * it_2->reachableNodeIds.size())){ continue;}
 			  if(projectedDistAvg >_MaxAvgProjectedDistance || closestDist >_MaxDistance_tmp ){ continue;}
 
 			    
@@ -3016,18 +3065,37 @@ void  FindNodes:: update_close_nodes2( /* in */ const float ( & weightedWhiteVal
 									    angle_nodes( ( * m_NodeBuffer )[ i ].connected[ 1 ], i, j ) ) ) < params.graphNode._MinAngle->get() ) ) ) {
 		( * m_NodeBuffer )[ i ].num_close--;
 		( * m_NodeBuffer )[ i ].close_id[ k ] = ( * m_NodeBuffer )[ i ].close_id[ ( * m_NodeBuffer )[ i ].num_close ];
-// 		( * m_NodeBuffer )[ i ].close_adj[ k ] = ( * m_NodeBuffer )[ i ].close_adj[ ( * m_NodeBuffer )[ i ].num_close ];
+		( * m_NodeBuffer )[ i ].close_adj[ k ] = ( * m_NodeBuffer )[ i ].close_adj[ ( * m_NodeBuffer )[ i ].num_close ];
 	}
 	else {
 	 
 // 	    float dist =std::max(double (m_Math::getTwoRectClosestDist(Rectangles[i], Rectangles[j])), 0.5);
 	    float dist = distance_nodes2( i, j );
 // 	    float dist = distance_nodes( i, j );
-	    float area = Rectangles[j].area ;
-	    float num_points = Rectangles[j].num_points ;
+	    float areaj = Rectangles[j].area ;
+	    float num_pointsj = Rectangles[j].num_points ;
+	    
+	    float areai = Rectangles[i].area ;
+	    float num_pointsi = Rectangles[i].num_points ;
+	    
+// 	    float dist_closest =  m_Math::getTwoRectClosestDist(Rectangles[i],Rectangles[j]);
+	    float dist_closest = dist - std::max(Rectangles[i].rect.width /2, Rectangles[i].rect.height/2) 
+	                                       - std::max(Rectangles[j].rect.width /2, Rectangles[j].rect.height/2);
+	    if(dist_closest<0){ dist_closest =0; }
+	    
+// 	    if((areai > 40 || num_pointsi >10) && (areaj > 40 || num_pointsj >10)){ dist /=4.0; }
+// 	    else if(area > 25 || num_points >6 ){ dist /=3.0; }
+	    
 	   
-	    ( * m_NodeBuffer )[ i ].close_adj[ k ] =/* fac **/num_points *area *  ( ang-  params.graphNode._MinAngle->get() ) *black_line_value2( weightedWhiteValues, i, j ) / ( dist +1);
-
+/*
+	    ( * m_NodeBuffer )[ i ].close_adj[ k ] = num_pointsj *areaj * num_pointsi *areai *( ang-  params.graphNode._MinAngle->get() ) 
+	                                            *black_line_value2( weightedWhiteValues, i, j ) / ( dist +1); */
+	    ( * m_NodeBuffer )[ i ].close_adj[ k ] = num_pointsj *areaj * num_pointsi *areai *( ang-  params.graphNode._MinAngle->get() ) 
+	                                            *black_line_value2( weightedWhiteValues, i, j ) / ( dist_closest +1) *0.0001;
+              if(  ( * m_NodeBuffer )[ i ].close_adj[ k ]<0){  ( * m_NodeBuffer )[ i ].close_adj[ k ] =  std::numeric_limits<int>::max(); }
+						    
+						    
+	    
 	    k++;
 	}
     }

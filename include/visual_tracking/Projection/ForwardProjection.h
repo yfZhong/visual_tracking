@@ -95,7 +95,7 @@ namespace vision
 
 	std::vector<cv::Point> ModelPointsInImg;
 	std::vector<pair<cv::Point, int > >ModelPointsInImgWithId;
-// 	std::vector<cv::Point3f> ModelPointsInWorldCord;
+	
 	
 	
 	
@@ -105,6 +105,18 @@ namespace vision
 	  
 	}
 		 
+	
+	geometry_msgs::Pose rbPose;
+	geometry_msgs::Pose cameraPose;
+	
+	
+	tf::Transform tf_World2Cam;
+	tf::Matrix3x3  rotation_World2Cam;
+	tf::Vector3  translation_World2Cam;
+	tf::Matrix3x3  rotation_Cam2World;
+	tf::Vector3  translation_Cam2World;
+	
+	bool getTFSuccessfully;
 	
       protected:
 	ros::NodeHandle node;
@@ -117,13 +129,9 @@ namespace vision
 	
 	float SamplePointDist_WorldCord;
 
-	tf::Transform tf_World2Cam;
-	tf::Matrix3x3  rotation_World2Cam;
-	tf::Vector3  translation_World2Cam;
-	tf::Matrix3x3  rotation_Cam2World;
-	tf::Vector3  translation_Cam2World;
+
 	
-	geometry_msgs::Pose rbPose;
+	
     };
 
 

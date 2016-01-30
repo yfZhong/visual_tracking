@@ -422,7 +422,7 @@ void DistortionModel::CreateUndistortFull(const Mat &rawImg, Mat &res)
 	}
 	DistortPFull(p, resP);
 
-	res = Mat::zeros(Size(siX, siY), CV_8UC3);
+	res = Mat(Size(siX, siY), CV_8UC3,cv::Scalar(200, 200, 200));
 
 	int counter = 0;
 

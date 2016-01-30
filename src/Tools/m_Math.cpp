@@ -1123,9 +1123,9 @@ bool m_Math::intersect( Line a, Line b ,Vec2i& intersetP)
 float m_Math::getTwoRectClosestDist(M_rect a, M_rect b){  
   
   float dist = std::numeric_limits<float>::max();
-  int k=0;
+  int count=0;
   
-  while(k==0){
+  while(count<2){
   
 	vector< Vec2i > Pas;
 	vector< Line >  Lbs;
@@ -1157,7 +1157,7 @@ float m_Math::getTwoRectClosestDist(M_rect a, M_rect b){
 	M_rect tmp = a;
 	a= b;
 	b= tmp;
-	k=1;
+	count ++;
 	
   
   }

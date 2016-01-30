@@ -56,7 +56,7 @@ void M_KalmanFilter::getMeasurementCov(double (&cov)[6]){
 
 //from Hafez
 double M_KalmanFilter::getHeading()
-{       headingOffset = params.particleFilter.HeadingOffset->get() ;
+{       headingOffset = params.hillclimbing.HeadingOffset->get() ;
         return m_Math::CorrectAngleRadian360(headingData.heading + headingOffset );
 }
 
@@ -128,12 +128,19 @@ void M_KalmanFilter::correction(const geometry_msgs::PoseStamped& msg, float con
 	
 	  
 	if(timeInterval.toSec() <0 || init==1){
-	      estimate_cov << 0.005, 0.0, 0.0, 0.0, 0.0, 0.0,
-			      0.0, 0.005, 0.0, 0.0, 0.0, 0.0,
-			      0.0, 0.0, 0.005, 0.0, 0.0, 0.0,
-			      0.0, 0.0, 0.0, 0.005, 0.0, 0.0,
-			      0.0, 0.0, 0.0, 0.0, 0.005, 0.0,
-			      0.0, 0.0, 0.0, 0.0, 0.0, 0.005;
+// 	      estimate_cov << 0.5, 0.0, 0.0, 0.0, 0.0, 0.0,
+// 			      0.0, 0.5, 0.0, 0.0, 0.0, 0.0,
+// 			      0.0, 0.0, 0.5, 0.0, 0.0, 0.0,
+// 			      0.0, 0.0, 0.0, 0.5, 0.0, 0.0,
+// 			      0.0, 0.0, 0.0, 0.0, 0.5, 0.0,
+// 			      0.0, 0.0, 0.0, 0.0, 0.0, 0.5;
+			      
+	      estimate_cov << 5, 0.0, 0.0, 0.0, 0.0, 0.0,
+		      0.0, 5, 0.0, 0.0, 0.0, 0.0,
+		      0.0, 0.0, 5, 0.0, 0.0, 0.0,
+		      0.0, 0.0, 0.0, 5, 0.0, 0.0,
+		      0.0, 0.0, 0.0, 0.0, 5, 0.0,
+		      0.0, 0.0, 0.0, 0.0, 0.0, 5;
 	      estimate_pose = measurement_pose;
 
 	      predict_pose = estimate_pose;
@@ -190,14 +197,18 @@ void M_KalmanFilter::correction(const geometry_msgs::PoseStamped& msg, float con
 		  measurement_cov(4,4) = (1 -std::min(conf1, 0.9))* params.kalmanFilter.KFOrientationCov->get();
 		  measurement_cov(5,5) = (1 -std::min(conf1, 0.9))* params.kalmanFilter.KFOrientationCov->get(); */ 
 		 
-                  measurement_cov(0,0) = (measurementCov[0])/ float(params.kalmanFilter.KFPositionCov->get());
-		  measurement_cov(1,1) = (measurementCov[1])/ float(params.kalmanFilter.KFPositionCov->get());
-		  measurement_cov(2,2) = (measurementCov[2])/ float(params.kalmanFilter.KFPositionCov->get());
+                  measurement_cov(0,0) = (measurementCov[0])* float(params.kalmanFilter.KFPositionCov->get());
+		  measurement_cov(1,1) = (measurementCov[1])* float(params.kalmanFilter.KFPositionCov->get());
+		  measurement_cov(2,2) = (measurementCov[2])* float(params.kalmanFilter.KFPositionCov->get());
 		  
-		  measurement_cov(3,3) = (measurementCov[3])/float(params.kalmanFilter.KFOrientationCov->get());
-		  measurement_cov(4,4) = (measurementCov[4])/ float(params.kalmanFilter.KFOrientationCov->get());
-		  measurement_cov(5,5) = (measurementCov[5])/ float(params.kalmanFilter.KFOrientationCov->get()); 
+		  measurement_cov(3,3) = (measurementCov[3])*float(params.kalmanFilter.KFOrientationCov->get());
+		  measurement_cov(4,4) = (measurementCov[4])* float(params.kalmanFilter.KFOrientationCov->get());
+		  measurement_cov(5,5) = (measurementCov[5])* float(params.kalmanFilter.KFOrientationCov->get()); 
+		  
 //  
+		  
+// 		  cout <<"Mes:  "<<  measurement_cov(0,0) <<"  "<<  measurement_cov(1,1) <<"  "<<  measurement_cov(2,2) <<"  "
+// 		  <<  measurement_cov(3,3) <<"  "<<  measurement_cov(4,4) <<"  "<<  measurement_cov(5,5) <<"  "<<endl;
 
 // 	      }
 	
@@ -207,7 +218,8 @@ void M_KalmanFilter::correction(const geometry_msgs::PoseStamped& msg, float con
 	    estimate_pose = predict_pose + K * (measurement_pose - predict_pose);
 	    Eigen::Matrix<float, 6, 6> I = Eigen:: Matrix<float, 6, 6>::Identity();
 	    estimate_cov = (I - K) * estimate_cov;
-	    
+// 	    cout<<"est:  "<<  estimate_cov(0,0) <<"  "<<  estimate_cov(1,1) <<"  "<<  estimate_cov(2,2) <<"  "
+// 		  <<  estimate_cov(3,3) <<"  "<<  estimate_cov(4,4) <<"  "<<  estimate_cov(5,5) <<"  "<<endl;
 
 	}
      

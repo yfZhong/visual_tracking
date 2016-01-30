@@ -54,12 +54,12 @@ namespace vision
 			
 			Mat rawHSV;
 			Mat Brightness_Channel;
-// 			Mat GreenBinary;
+			Mat GreenBinary;
 			
 			Mat fieldConvexHullMat;
 			vector<cv::Point> fieldConvexHullPoints;
 			vector< vector <cv::Point > > ObstacleConvexHull;
-			
+			vector< vector <cv::Point > > WhiteObjectConvexHull;
 			
 			int m_Top;
 	
@@ -82,6 +82,7 @@ namespace vision
 			       
 			       fieldConvexHullMat = Mat::zeros(H,W, CV_8UC1);
 			       Brightness_Channel = Mat::zeros(H,W, CV_8UC1);
+			       GreenBinary = Mat::zeros(H,W, CV_8UC1);
 			      
 			       MaximunNodeNum =0;			       
 			       

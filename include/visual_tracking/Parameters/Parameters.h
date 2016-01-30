@@ -83,6 +83,7 @@ class SquareC
 	 config_server::Parameter<int> *MaxNeighborDist;
 	 config_server::Parameter<int> *Max_K;
 	 config_server::Parameter<int> *MinPointNum;
+	 config_server::Parameter<int> *Max_K_border;
   
   
 };
@@ -95,6 +96,7 @@ public:
 	config_server::Parameter<int> *MaxDistanceFromBottomOfImage;
 	config_server::Parameter<int> *minArea;
 	config_server::Parameter<int> *maxContourCount;
+	config_server::Parameter<int> *FieldBorder;
 
 };
 
@@ -195,7 +197,10 @@ public:
 	config_server::Parameter<bool> *showFieldModel;
 	config_server::Parameter<bool> *showCorrespondence;
 	config_server::Parameter<bool> *useKalmanFilter;
+	config_server::Parameter<bool> *useParticleFilter;
 	config_server::Parameter<bool> *useMotionOdom;
+	config_server::Parameter<bool> *useSolvePnP;
+	config_server::Parameter<bool> *useRansac;
 };
 
 // class CameraCalibratorC
@@ -385,6 +390,9 @@ public:
 		field.MaxDistanceFromBottomOfImage = new config_server::Parameter<int>("/vision/field/MaxDistanceFromBottomOfImage", 0, 5,480, 200);
 		field.minArea = new config_server::Parameter<int>("/vision/field/minArea", 0, 1, IMGWIDTH*IMGHEIGHT, 500);
 		field.maxContourCount = new config_server::Parameter<int>("/vision/field/maxContourCount", 0, 1, 100, 4);
+	        field.FieldBorder = new config_server::Parameter<int>("/vision/field/FieldBorder", 0, 1, 100, 4);
+
+
 		
 		obstacle.minArea = new config_server::Parameter<int>("/vision/obstacle/minArea", 0, 10, IMGWIDTH*IMGHEIGHT, 500);
 	  
@@ -422,6 +430,8 @@ public:
 		
 		square.MaxNeighborDist = new config_server::Parameter<int>("/vision/square/MaxNeighborDist", 2, 1, 10, 5);
 		square.Max_K = new config_server::Parameter<int>("/vision/square/Max_K", 2, 1, 10, 6);
+		square.Max_K_border = new config_server::Parameter<int>("/vision/square/Max_K_border", 2, 1, 10, 5);
+		
 		square.MinPointNum = new config_server::Parameter<int>("/vision/square/MinPointNum", 0, 1, 100, 3);
 		
 
@@ -446,7 +456,7 @@ public:
 		graphNode._MaxCloseNum= new config_server::Parameter<int>("/vision/graphNode/_MaxCloseNum", 1, 1,30, 10);
 		graphNode._NeighborRadius = new config_server::Parameter<float>("/vision/graphNode/_NeighborRadius", 3, 1,30, 15);
 		graphNode._MinAngle = new config_server::Parameter<int>("/vision/graphNode/_MinAngle", 10, 1,90, 45);
-		graphNode._Min_adj = new config_server::Parameter<int>("/vision/graphNode/_Min_adj", 1, 10, 10000, 100);
+		graphNode._Min_adj = new config_server::Parameter<int>("/vision/graphNode/_Min_adj", 1, 10, 100000, 100);
 		graphNode._MinAngleForSameComp = new config_server::Parameter<int>("/vision/graphNode/_MinAngleForSameComp", 100, 1, 180, 165);
 		graphNode._MaxDistanceForConnect = new config_server::Parameter<float>("/vision/graphNode/_MaxDistanceForConnect", 0, 1, 100, 40);
 		graphNode._MinCmpLineLength = new config_server::Parameter<float>("/vision/graphNode/_MinCmpLineLength", 0, 1, 400, 20);
@@ -525,7 +535,11 @@ public:
 		debug.useKalmanFilter= new config_server::Parameter<bool>("/vision/debug/useKalmanFilter", true);
 		debug.useMotionOdom= new config_server::Parameter<bool>("/vision/debug/useMotionOdom", false);
 		
+		debug.useSolvePnP= new config_server::Parameter<bool>("/vision/debug/useSolvePnP", false);
+		debug.useRansac= new config_server::Parameter<bool>("/vision/debug/useRansac", false);
 		
+		
+		debug.useParticleFilter= new config_server::Parameter<bool>("/vision/debug/useParticleFilter", false);
 		
 		
 		

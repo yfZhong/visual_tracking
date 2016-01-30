@@ -15,9 +15,15 @@ vision:
     heightUnDistortion: 1177
     useBagfile: 1
     widthUnDistortion: 1620
+  dataAssociation:
+    MaxAngDiff: 45
+    MaxErrorForInlier: 100
+    _MaxAngleChange: 10
+    _MinCompLengthForModelError: 100
   debug:
     publishTime: 0
     showAssociateLines: 0
+    showBoundingRects: 1
     showCamPose: 0
     showCorrespondence: 1
     showFieldHull: 1
@@ -26,23 +32,29 @@ vision:
     showLineInfo: 0
     showMarkers: 1
     showMergedLines: 0
+    showModelLines: 1
     showNodeGraph: 1
     showRobPose: 1
     showSkeletonPixels: 1
+    showTangentLine: 0
     useKalmanFilter: 1
     useMotionOdom: 1
+    useParticleFilter: 0
+    useRansac: 0
+    useSolvePnP: 0
   field:
     BonnField: 1
+    FieldBorder: 4
     MaxDistanceFromBottomOfImage: 200
     maxContourCount: 3
     minArea: 600
   fieldhsv:
-    h0: 41
-    h1: 78
-    s0: 70
+    h0: 37
+    h1: 77
+    s0: 65
     s1: 219
-    v0: 60
-    v1: 110
+    v0: 38
+    v1: 255
   goal:
     DistanceToMerge: 20
     MaxOutField: 40
@@ -79,7 +91,26 @@ vision:
     Min_adj: 5000
     SamplePointDist: 3
     SmallAngle: 63
+    _AvgAngleDiff: 15
+    _MaxAngleDiff: 15
+    _MaxAvgProjectedDistance: 25
+    _MaxCloseNum: 10
     _MaxDistanceForConnect: 40
+    _MaxDistanceForMerge: 80
+    _MaxLineSegDistance: 50
+    _MaxProjectedDistance: 25
+    _MinAngle: 45
+    _MinAngleForSameComp: 165
+    _MinCmpLineLength: 30
+    _Min_adj: 100
+    _NeighborRadius: 15
+  hillclimbing:
+    ErrorThreshold1: 5
+    ErrorThreshold2: 50
+    HeadingOffset: 0
+    MaxHypothesisNum: 20
+    MaxIterationNum: 5
+    MovingStepCoefficient: 1
   icp:
     AvgDistThresholdForConf: 3
     HeadingOffset: 3.1416
@@ -109,13 +140,13 @@ vision:
     MeasLineLengthThreshod: 200
     MeasLineMaxAngDifThreshod: 60
     MeasLineNumThreshod: 4
-    MinBrightnessValue: 90
+    MinBrightnessValue: 89
     MinLineLength: 80
     MinLineSegDistance: 0.8
     MinLineSegDistanceImg: 50
     MinProjectedDistance: 0.35
     MinProjectedDistanceImg: 23
-    MinSkeletonValue: 50
+    MinSkeletonValue: 38
     ObstacleLineDistance: -10
   linehsv:
     h0: 0
@@ -125,8 +156,8 @@ vision:
     v0: 0
     v1: 254
   location:
-    x: -1.4
-    y: 6.70552e-09
+    x: -0.6
+    y: 0
     z: 0.58
   obstacle:
     minArea: 500
@@ -140,7 +171,7 @@ vision:
   orientation:
     x: 0
     y: 0
-    z: -0.2
+    z: -1.57
   particleFilter:
     HeadingOffset: 0
     MinSumOfLineLengthOnImage: 100
@@ -148,3 +179,8 @@ vision:
     RandomSamplePct: 0.2
   projection:
     timeToShift: 0.150
+  square:
+    MaxNeighborDist: 5
+    Max_K: 6
+    Max_K_border: 5
+    MinPointNum: 3

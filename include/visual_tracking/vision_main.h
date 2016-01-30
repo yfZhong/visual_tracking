@@ -67,6 +67,7 @@
 #include "FieldObjects/findField.h"
 #include "FieldObjects/findGoalPosts.h"
 #include "FieldObjects/findObstacle.h"
+#include "FieldObjects/findWhiteObject.h"
 
 
 using namespace vision;
@@ -108,6 +109,7 @@ namespace vision
                         FindField FieldFinder;
 			FindGoalPosts GoalPostsFinder;
 			FindObstacle ObstacleFinder;
+			FindWhiteObjects WhiteObjectFinder;
 			FindLines LineFinder;
 			FindNodes NodeFinder;
 			DataAssociation AssociateData;
@@ -123,7 +125,7 @@ namespace vision
 			
 			
 			
-// 			ParticleFilter particlefilter;
+			ParticleFilter particlefilter;
 			LineMatcher lineMatcher;
 			
                         ros::NodeHandle nh;
@@ -166,6 +168,7 @@ namespace vision
 // 			int H, W, siX, siY;
 			
 			sensor_msgs::Image::ConstPtr img;
+			
 
 			
 			

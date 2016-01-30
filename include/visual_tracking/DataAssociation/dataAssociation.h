@@ -87,6 +87,43 @@ namespace vision
 	      return ModelToDetectionOutliers.size();
 	    }
 	    
+	    float getAvgError(){//sqrt
+	       if(getDTMInlierNum() ==0 || getMTDInlierNum()== 0  ){return std::numeric_limits<float>::max();/*;cout<<"no inlier"<<endl;*/}
+	       return   sqrt( DTMError+ MTDError)/float(getDTMInlierNum()  + getMTDInlierNum());
+	    }
+	    
+	    float getSumOfError(){//power
+	        if(getDTMInlierNum() ==0 || getMTDInlierNum()== 0  ){return std::numeric_limits<float>::max();/*;cout<<"no inlier"<<endl;*/}
+	        return   DTMError + MTDError;
+	      
+	    }
+	    
+	    
+	    float getSumOfInlierNum(){//power
+	        return   getDTMInlierNum() + getMTDInlierNum();
+	      
+	    }
+	    
+	    
+	    float getConfidence(){
+  
+		  float ErrorThreshold1 = std::max(double(params.hillclimbing.ErrorThreshold1->get()), 1.0);
+		  float ErrorThreshold2 = std::max(double(params.hillclimbing.ErrorThreshold2->get()), 1.0);
+                  float error= getAvgError();
+
+		  if(DTMInlierPct == 0 || MTDInlierPct == 0){return 0.0; /*cout<<"bad1"<<endl;*/}
+		  if(DTMError == 0 || MTDError == 0){return 0.0; /* cout<<"bad2"<<endl;*/}
+
+		  error = error/DTMInlierPct;
+	   
+		  if(error< ErrorThreshold1){ return 1.0;}
+		  else if(error > ErrorThreshold2) {return 0.0;}
+		  else{
+		    return 1.0- (error - ErrorThreshold1)/(ErrorThreshold2 -ErrorThreshold1) ;
+		  }
+  
+            }
+	    
 	    
 	    
 	    

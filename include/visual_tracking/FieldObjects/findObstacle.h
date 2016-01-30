@@ -34,8 +34,12 @@ public:
 		const int minArea = params.obstacle.minArea->get();
 		vector<cv::Point>  res;
 		vector<vector<cv::Point> > obstContours;
-
-		cv::findContours(obstacleMask.clone()/*To have binaryFrame after this function*/,
+		
+		
+		Mat binary;
+	       threshold( obstacleMask, binary, params.line.MinBrightnessValue->get(), 1, cv::THRESH_BINARY );
+		
+		cv::findContours(binary/*To have binaryFrame after this function*/,
 			obstContours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
 
 		std::sort(obstContours.begin(), obstContours.end(), bind(&FindObstacle::SortFuncDescending, this, _1, _2));

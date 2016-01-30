@@ -10,12 +10,30 @@
 
 Eigen::Matrix4d PoseCalculator::getRelativeTransform(std::vector<cv::Point2f> imgPts,  std::vector<cv::Point3f> worldPts) {
   cv::Mat rvec, tvec;
+  
+  
+  
   cv::Matx33f cameraMatrix(
                            CamParam::fx,      0,       CamParam::cx,
                            0,            CamParam::fy, CamParam::cy,
                            0,                  0,          1         );
   cv::Vec4f distParam(0,0,0,0); // all 0?
-  cv::solvePnP(worldPts, imgPts, cameraMatrix, distParam, rvec, tvec);
+  
+  
+  Mat inliers;
+  if(params.debug.useRansac->get()){
+//         cv::solvePnPRansac(worldPts, imgPts, cameraMatrix, distParam, rvec, tvec, 1, 100, 10.0, 20, inliers, CV_EPNP);
+	cv::solvePnPRansac(worldPts, imgPts, cameraMatrix, distParam, rvec, tvec, 1, 100, 10.0, 20, inliers, CV_EPNP);
+//       cv::solvePnP(worldPts, imgPts, cameraMatrix, distParam, rvec, tvec, 1, CV_EPNP);
+    
+  }else{
+//      cv::solvePnP(worldPts, imgPts, cameraMatrix, distParam, rvec, tvec, 0 ,CV_ITERATIVE);
+       cv::solvePnP(worldPts, imgPts, cameraMatrix, distParam, rvec, tvec, 1, CV_EPNP);
+
+  }  
+  
+  
+  
   cv::Matx33d r;
   cv::Rodrigues(rvec, r);
   Eigen::Matrix3d wRo;
@@ -35,10 +53,48 @@ void PoseCalculator::calculatePose(std::vector<cv::Point2f> imgPts,  std::vector
      
       cameraPose.header.frame_id = "world";
       cameraPose.header.stamp =  ros::Time::now();
+     
+//       forw_Proj.setRobotPose( robotPose.pose);
+      
+//       tf::Transform tf_World2Cam = forw_Proj.tf_World2Cam;
+      //camera pose
+//       tf::Matrix3x3  rotation_World2Cam = forw_Proj.rotation_World2Cam;
+//       tf::Vector3  translation_World2Cam = forw_Proj.translation_World2Cam;
+      
+//        tf::Matrix3x3  rotation_Cam2World = forw_Proj.rotation_Cam2World;
+//        tf::Vector3  translation_Cam2World = forw_Proj.translation_Cam2World;
+//        cv::Mat rvec(cv::Size(3, 3), CV_32F ), tvec(cv::Size(3, 1), CV_32F );
+//       
+//         cv::Matx33d r;
+// 	r<< rotation_Cam2World[0].x(), rotation_Cam2World[0].y(), rotation_Cam2World[0].z(),
+// 	    rotation_Cam2World[1].x(), rotation_Cam2World[1].y(), rotation_Cam2World[1].z(),
+// 	    rotation_Cam2World[2].x(), rotation_Cam2World[2].y(), rotation_Cam2World[2].z();
+//        
+// 	for(int i =0; i<3; ++i){ 
+// 	    for(int j =0; j<3; ++j){    
+// 	         rvec.at<double>(j, i) = r(i,j);
+// 	    }
+// 	}
+//       
+//       
+//       cv::Mat _rvec_v(cv::Size(3, 1), CV_32F );
+//       cv::Rodrigues(rvec, _rvec_v);
+//       cout<<_rvec_v<<endl;
+// 	  cout<<"            rotation init-----     "<<_rvec_v.at<double>(0)<<"   "<<_rvec_v.at<double>(1)<<"   "<<_rvec_v.at<double>(2) <<endl;
+//       cout<<endl;
+//       
+//       
+//         tvec.at<double>(0) = translation_Cam2World.x() ;
+// 	tvec.at<double>(1) = translation_Cam2World.y() ;
+// 	tvec.at<double>(2) = translation_Cam2World.z() ;
+//       
+// //         cout<<_tvec<<endl;
+//         cout<<"           translate init -----     "<< tvec.at<double>(0)<<"  "<< tvec.at<double>(1)<<"  "<<  tvec.at<double>(2)<<endl;
+//      
       
       
      if(imgPts.size()>=3){
-      Eigen::Matrix4d transform = getRelativeTransform(imgPts, worldPts);
+      Eigen::Matrix4d transform = getRelativeTransform(imgPts, worldPts); 
       
 
       Eigen::Matrix4d transformInv = transform.inverse();
@@ -55,7 +111,13 @@ void PoseCalculator::calculatePose(std::vector<cv::Point2f> imgPts,  std::vector
 	    cout<<"2 "<< roll0<< "," << pitch0<< "," << yaw0<<endl;
 	
       }*/
-      
+
+
+//      cout<<rvec<<endl;
+//      cout<<endl;
+//      cout<<tvec<<endl;
+//      cout<<endl;
+//        cout<<"           translate update -----     "<< transformInv(0,3)<<"  "<< transformInv(1,3)<<"  "<<  transformInv(2,3)<<endl;
 
       cameraPose.pose.position.x = transformInv(0,3);
       cameraPose.pose.position.y = transformInv(1,3);

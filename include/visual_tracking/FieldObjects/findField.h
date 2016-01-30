@@ -13,6 +13,7 @@
 #include <visual_tracking/Parameters/Parameters.h>
 #include <visual_tracking/Projection/DistortionModel.h>
 #include <visual_tracking/Tools/tools.h>
+#include <visual_tracking/Tools/m_Math.h>
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -47,18 +48,20 @@ namespace vision
 
 	    int MAX_DESTANCE_FROM_BOTTOM_OF_IMAGE;
 	    
-	    bool FindFieldConvexHull(/* in */ cv::Mat GreenBinary, /* out */Mat &fieldConvectHull,vector<cv::Point> &fieldConvexHullPoints,/* out */int&  m_Top );
+	    bool FindFieldConvexHull(/* in */ cv::Mat &GreenBinary, /* out */Mat &fieldConvectHull,vector<cv::Point> &fieldConvexHullPoints,/* out */int&  m_Top );
+	   
 	    void ColorClassification(const Mat &srcHsvImg, const Mat &tmplateGrayImg,Mat *dstGrayImgs, hsvRangeC *ranges, bool *inTemplate, int size);
             
+	    
 // 	    vector<cv::Point> fieldConvexHullPoints;
 	    
-	    
+	    vector<cv::Point>  fieldConvexHullPointsUndistort;
 
 	private:
 	    int  m_Top;
 	    
 	    unsigned int H, W;
-	    
+	    int siX, siY;
 
 // 	    void bresenham(/* int */ int x1, int y1, int x2, int y2, /* out */std::vector< int > & m_FieldBoundary );
 	    

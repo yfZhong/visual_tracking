@@ -39,7 +39,7 @@
 
 using namespace std;
 using namespace  vision;
-
+using namespace Eigen;
 
 namespace vision
       {   
@@ -67,6 +67,9 @@ namespace vision
 	  void calculateErrorForCov(geometry_msgs::Pose &p,FrameGrabber & CamFrm, double &error, double& K, PointMatcher &pointMatcher,FindNodes &NodeFinder);
 	  
 	  
+	  
+	  
+	  
 	  DataAssociation AssociateData;
 	  float calculateError(geometry_msgs::Pose &p,FrameGrabber & CamFrm,FindNodes &NodeFinder);
 	  float calculateAvgError(geometry_msgs::Pose &p,FrameGrabber & CamFrm,FindNodes &NodeFinder);
@@ -75,12 +78,23 @@ namespace vision
 	  void robotPoseUpdate(geometry_msgs::Pose &p,FrameGrabber & CamFrm,FindNodes &NodeFinder, float &error);
 	  float getConfidence(geometry_msgs::Pose &p,FrameGrabber & CamFrm,FindNodes &NodeFinder);
 	  
+	   float doModelMatching(geometry_msgs::Pose &p,FrameGrabber & CamFrm,FindNodes &NodeFinder);
+	   bool Least_Square( DataAssociation &AssociateData,FrameGrabber & CamFrm ,FindNodes &NodeFinder,geometry_msgs::Pose &p);
+	   void Least_Square2(geometry_msgs::Pose &pose,FrameGrabber & CamFrm ,FindNodes &NodeFinder);
+	   void IterativeLeastSquare(geometry_msgs::Pose &pose,FrameGrabber & CamFrm ,FindNodes &NodeFinder);
+	   bool hypothesisEvalueate2(float conf, FrameGrabber & CamFrm,FindNodes &NodeFinder);
+	   double fx , fy, cx, cy; 
+	   int siX, siY, H, W;
+	   PoseCalculator Least_Square_poseUpdate;
 	  
 	  
 	  void mainLoop(geometry_msgs::Pose &pose,FrameGrabber & CamFrm ,FindNodes &NodeFinder);
 	  
 	  geometry_msgs::Pose currentPose;
 	  float currentError;
+	  float currentAvgError;
+	  float preError;
+	  float preAvgError;
 	  
 	  
 	  float fieldA;
@@ -89,9 +103,10 @@ namespace vision
 	  geometry_msgs::PoseArray hypothesisArray;
 	  vector<float> hypothesisWeights;
 	  geometry_msgs::Pose SamplingPoseAround(geometry_msgs::Pose center, float conf);
-	  void hypothesisEvalueate(float conf, FrameGrabber & CamFrm,FindNodes &NodeFinder);
-	  
-	  
+	  bool hypothesisEvalueate(float conf, FrameGrabber & CamFrm,FindNodes &NodeFinder);
+	  void correctHeading( geometry_msgs::Pose &pose );
+	   float getDistance( geometry_msgs::Pose &pose1, geometry_msgs::Pose &pose2 );
+	   float getYawDiff( geometry_msgs::Pose &pose1, geometry_msgs::Pose &pose2 );
 	  
 	//by Hafez
 	ros::NodeHandle nodeHandle;
@@ -128,6 +143,11 @@ namespace vision
 	  gsl_rng* allocate_rng();
 	  double random(double start,double end);
 	  float random(float start,float end);
+	  
+	  
+	  int count;
+	  
+	  
 	  
 	};
 

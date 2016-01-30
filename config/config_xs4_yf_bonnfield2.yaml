@@ -16,10 +16,10 @@ vision:
     useBagfile: 1
     widthUnDistortion: 1620
   dataAssociation:
-    MaxAngDiff: 85
-    MaxErrorForInlier: 140
-    _MaxAngleChange: 25
-    _MinCompLengthForModelError: 40
+    MaxAngDiff: 70
+    MaxErrorForInlier: 50
+    _MaxAngleChange: 50
+    _MinCompLengthForModelError: 100
   debug:
     publishTime: 0
     showAssociateLines: 0
@@ -39,6 +39,7 @@ vision:
     showTangentLine: 0
     useKalmanFilter: 1
     useMotionOdom: 1
+    useParticleFilter: 0
   field:
     BonnField: 1
     MaxDistanceFromBottomOfImage: 200
@@ -97,9 +98,9 @@ vision:
     _MaxProjectedDistance: 11
     _MinAngle: 42
     _MinAngleForSameComp: 165
-    _MinCmpLineLength: 40
+    _MinCmpLineLength: 0
     _Min_adj: 100
-    _NeighborRadius: 15
+    _NeighborRadius: 10
   hillclimbing:
     ErrorThreshold: 100
     ErrorThreshold1: 30
@@ -107,7 +108,7 @@ vision:
     HeadingOffset: 0
     MaxHypothesisNum: 20
     MaxIterationNum: 5
-    MovingStepCoefficient: 0.5
+    MovingStepCoefficient: 0.1
   icp:
     AvgDistThresholdForConf: 3
     HeadingOffset: 3.1416
@@ -143,7 +144,7 @@ vision:
     MinLineSegDistanceImg: 50
     MinProjectedDistance: 0.35
     MinProjectedDistanceImg: 23
-    MinSkeletonValue: 45
+    MinSkeletonValue: 54
     ObstacleLineDistance: -10
   linehsv:
     h0: 0
@@ -178,5 +179,6 @@ vision:
     timeToShift: 0.150
   square:
     MaxNeighborDist: 5
-    Max_K: 7
+    Max_K: 9
+    Max_K_border: 5
     MinPointNum: 2

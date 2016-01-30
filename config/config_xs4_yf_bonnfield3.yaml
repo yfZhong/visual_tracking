@@ -16,7 +16,7 @@ vision:
     useBagfile: 1
     widthUnDistortion: 1620
   dataAssociation:
-    MaxAngDiff: 90
+    MaxAngDiff: 85
     MaxErrorForInlier: 60
     _MaxAngleChange: 25
     _MinCompLengthForModelError: 40
@@ -39,6 +39,7 @@ vision:
     showTangentLine: 0
     useKalmanFilter: 1
     useMotionOdom: 1
+    useParticleFilter: 0
   field:
     BonnField: 1
     MaxDistanceFromBottomOfImage: 200
@@ -77,7 +78,7 @@ vision:
     MaxDist: 0
     MaxDistanceForMergeNode1: 50
     MaxDistanceForMergeNode2: 50
-    MaxLineSegDistance: 30
+    MaxLineSegDistance: 10
     MaxLineSegDistanceForJoint: 400
     MaxProjectedDistance: 15
     MergeJointDist: 0
@@ -97,7 +98,7 @@ vision:
     _MaxProjectedDistance: 11
     _MinAngle: 42
     _MinAngleForSameComp: 150
-    _MinCmpLineLength: 40
+    _MinCmpLineLength: 10
     _Min_adj: 100
     _NeighborRadius: 15
   hillclimbing:
@@ -107,7 +108,7 @@ vision:
     HeadingOffset: 0
     MaxHypothesisNum: 50
     MaxIterationNum: 5
-    MovingStepCoefficient: 0.1
+    MovingStepCoefficient: 0.05
   icp:
     AvgDistThresholdForConf: 3
     HeadingOffset: 3.1416
@@ -143,7 +144,7 @@ vision:
     MinLineSegDistanceImg: 50
     MinProjectedDistance: 0.35
     MinProjectedDistanceImg: 23
-    MinSkeletonValue: 35
+    MinSkeletonValue: 51
     ObstacleLineDistance: -10
   linehsv:
     h0: 0
@@ -179,4 +180,5 @@ vision:
   square:
     MaxNeighborDist: 5
     Max_K: 6
-    MinPointNum: 1
+    Max_K_border: 5
+    MinPointNum: 3

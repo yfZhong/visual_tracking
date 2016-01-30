@@ -51,6 +51,7 @@ ForwardProjection::ForwardProjection():listener(ros::Duration(10)){
   m_ModelLine_Buffer  = new ModelLine_Buffer;
   
 //   points_pub_cam = node.advertise< geometry_msgs::PointStamped >( "line_points_cam_cord", 1 );
+  getTFSuccessfully = 0;
 
 }
 
@@ -170,10 +171,12 @@ void ForwardProjection::setTfEgorot2Cam(){
 		listener.lookupTransform("camera_optical","ego_rot",    cur_time_stamp- ros::Duration(timeToshift), tfmsg);
 		
 		tf_Egorot2Cam =  static_cast<const tf::Transform&>(tfmsg);
+		getTFSuccessfully = 1;
 	   
 	}
       catch(tf::TransformException& ex){
 	  ROS_ERROR("Received an exception trying to transform a pose : %s", ex.what());
+	  getTFSuccessfully = 0;
       }   
 }
 void ForwardProjection::onInit(ros::Time t ){
@@ -186,14 +189,20 @@ void ForwardProjection::setRobotPose(geometry_msgs::Pose p){
     tf::Transform tf_world2Egorot;
     tf::poseMsgToTF (rbPose, tf_world2Egorot);
   
-    tf_World2Cam =  tf_Egorot2Cam*tf_world2Egorot.inverse();
-    
-    
-    rotation_World2Cam = tf_World2Cam.getBasis();
-    translation_World2Cam =  tf_World2Cam.getOrigin();
-    
-    rotation_Cam2World =  tf_World2Cam.inverse().getBasis();
-    translation_Cam2World =  tf_World2Cam.inverse().getOrigin();
+    if(getTFSuccessfully == 1){
+	tf_World2Cam =  tf_Egorot2Cam*tf_world2Egorot.inverse();
+	
+	
+	rotation_World2Cam = tf_World2Cam.getBasis();
+	translation_World2Cam =  tf_World2Cam.getOrigin();
+	
+	rotation_Cam2World =  tf_World2Cam.inverse().getBasis();
+	translation_Cam2World =  tf_World2Cam.inverse().getOrigin();
+    //     cout<<"translation_Cam2World " <<endl;
+    //     cout<<translation_Cam2World.x()<< "  " <<translation_Cam2World.y()<< "  "<<translation_Cam2World.z()<< "  " <<endl;
+	
+	tf::poseTFToMsg (tf_World2Cam.inverse(), cameraPose);
+    }
     
 }
 
@@ -237,6 +246,17 @@ void ForwardProjection::projectFieldPoints2Image(){
 
 	      ModelPointsInImg.push_back(cv::Point(pixelC(0,0), pixelC(1,0)));
 	      ModelPointsInImgWithId.push_back(make_pair(cv::Point(pixelC(0,0), pixelC(1,0)),PointsInWorldCord[i].second));
+	      
+	      
+	      
+	      
+// 	      cout<<ModelPointsInImg.back().x <<"   "<<ModelPointsInImg.back().y<<endl;
+	      
+// 	     
+// 	      
+// 	      cout<< W.x<<"  "<< PointsInWorldCord[i].first.x()<<"     "<<
+// 	             W.y<<"  " <<PointsInWorldCord[i].first.y()<<"     "<<
+// 	             W.z<<"  "<< PointsInWorldCord[i].first.z()<<"     "<<endl;
 	      
 // 	      ModelPointsInWorldCord.push_back(cv::Point3f(PointsInWorldCord[i].first.x(), 
 // 							   PointsInWorldCord[i].first.y(), 
@@ -466,6 +486,8 @@ void ForwardProjection::projectImgPoint2WorldCord(cv::Point p, cv::Point3f& pOut
 			                          0);
 
 }
+
+
 
 
 void ForwardProjection::TfRobotPose2CamPose(geometry_msgs::PoseStamped &robotPose, geometry_msgs::PoseStamped &cameraPose){

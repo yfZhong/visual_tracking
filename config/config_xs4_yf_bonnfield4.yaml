@@ -16,10 +16,10 @@ vision:
     useBagfile: 1
     widthUnDistortion: 1620
   dataAssociation:
-    MaxAngDiff: 61
-    MaxErrorForInlier: 60
+    MaxAngDiff: 71
+    MaxErrorForInlier: 25
     _MaxAngleChange: 25
-    _MinCompLengthForModelError: 40
+    _MinCompLengthForModelError: 30
   debug:
     publishTime: 0
     showAssociateLines: 0
@@ -39,17 +39,22 @@ vision:
     showTangentLine: 0
     useKalmanFilter: 1
     useMotionOdom: 1
+    useParticleFilter: 0
+    useRansac: 0
+    useSolvePnP: 0
+    useSolvePnPRansac: 1
   field:
     BonnField: 1
+    FieldBorder: 6
     MaxDistanceFromBottomOfImage: 200
     maxContourCount: 3
     minArea: 600
   fieldhsv:
-    h0: 45
-    h1: 78
+    h0: 31
+    h1: 97
     s0: 70
-    s1: 219
-    v0: 60
+    s1: 255
+    v0: 0
     v1: 110
   goal:
     DistanceToMerge: 20
@@ -89,7 +94,7 @@ vision:
     SmallAngle: 15
     _AvgAngleDiff: 6
     _MaxAngleDiff: 5
-    _MaxAvgProjectedDistance: 20
+    _MaxAvgProjectedDistance: 15
     _MaxCloseNum: 4
     _MaxDistanceForConnect: 7
     _MaxDistanceForMerge: 90
@@ -97,16 +102,16 @@ vision:
     _MaxProjectedDistance: 11
     _MinAngle: 42
     _MinAngleForSameComp: 165
-    _MinCmpLineLength: 40
-    _Min_adj: 100
-    _NeighborRadius: 15
+    _MinCmpLineLength: 20
+    _Min_adj: 21
+    _NeighborRadius: 12
   hillclimbing:
-    ErrorThreshold1: 20
-    ErrorThreshold2: 50
+    ErrorThreshold1: 1
+    ErrorThreshold2: 25
     HeadingOffset: 0
-    MaxHypothesisNum: 20
-    MaxIterationNum: 5
-    MovingStepCoefficient: 0.1
+    MaxHypothesisNum: 31
+    MaxIterationNum: 4
+    MovingStepCoefficient: 0.05
   icp:
     AvgDistThresholdForConf: 3
     HeadingOffset: 3.1416
@@ -117,14 +122,14 @@ vision:
     SamplePointDist_WorldCord: 0.2
   kalmanFilter:
     ErrorThreshod: 5
-    KFOrientationCov: 100000
-    KFPositionCov: 100000
+    KFOrientationCov: 1000000
+    KFPositionCov: 1000000
   line:
     AngleToMerge: 15
     AngleToMergeImg: 0
     Div1: 0.5
     Div2: 0.7
-    HoughLineMinLineLength: 13
+    HoughLineMinLineLength: 3
     HoughLineRho: 7
     HoughLineTheta: 6
     HoughLineVoteThreshold: 14
@@ -136,13 +141,13 @@ vision:
     MeasLineLengthThreshod: 200
     MeasLineMaxAngDifThreshod: 60
     MeasLineNumThreshod: 4
-    MinBrightnessValue: 90
-    MinLineLength: 80
+    MinBrightnessValue: 42
+    MinLineLength: 70
     MinLineSegDistance: 0.8
     MinLineSegDistanceImg: 50
     MinProjectedDistance: 0.35
     MinProjectedDistanceImg: 23
-    MinSkeletonValue: 35
+    MinSkeletonValue: 23
     ObstacleLineDistance: -10
   linehsv:
     h0: 0
@@ -152,22 +157,22 @@ vision:
     v0: 0
     v1: 254
   location:
-    x: -1.4
-    y: 6.70552e-09
+    x: 2
+    y: 0
     z: 0.58
   obstacle:
-    minArea: 500
+    minArea: 300
   obstaclehsv:
     h0: 100
     h1: 180
-    s0: 100
+    s0: 22
     s1: 255
     v0: 0
-    v1: 100
+    v1: 255
   orientation:
     x: 0
     y: 0
-    z: -0.2
+    z: 1.57
   particleFilter:
     HeadingOffset: 0
     MinSumOfLineLengthOnImage: 100
@@ -176,6 +181,7 @@ vision:
   projection:
     timeToShift: 0.150
   square:
-    MaxNeighborDist: 5
-    Max_K: 6
-    MinPointNum: 1
+    MaxNeighborDist: 2
+    Max_K: 9
+    Max_K_border: 5
+    MinPointNum: 2

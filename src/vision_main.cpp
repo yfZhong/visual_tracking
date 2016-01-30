@@ -90,11 +90,15 @@ void Vision::onInit(){
 	 camera->TakeCapture();
 	
 	ROS_INFO("Init finished");
+	
+	drawField();
 }
 
 
 void Vision::update()
-{
+{       
+  
+        ros::Time t1 = ros::Time::now();
 	
 	//cam
 	double confidence = camera->TakeCapture();
@@ -108,7 +112,7 @@ void Vision::update()
 	ros::Duration dura= (camera->captureTime - CameraFrame.header.stamp);
 	//Init robot Pose
 	if(CameraFrame.imagecounter ==0 ||  dura.toSec()<0){
-	    
+	    drawField();
 	    
 	    robotPoseS.header.frame_id = "world";
 	    robotPoseS.pose.position.x= params.location.x->get();
@@ -119,6 +123,7 @@ void Vision::update()
 	    double pitch = params.orientation.y->get();//st: 0.5*0.05PI; 
 	    double yaw   = params.orientation.z->get();//st: 1.0*0.05PI;
 	    robotPoseS.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw ( roll, pitch, yaw);
+	    CameraFrame.imagecounter =0;
   
 	}
 	if(CameraFrame.imagecounter% 20==0 ){
@@ -137,11 +142,25 @@ void Vision::update()
 	split(CameraFrame.rawHSV, channels);//	channels[2]
 	
 
+        ROS_ERROR("time RGB-HSV  : %f", (ros::Time::now() - t1).toSec());
+	
+	
+//undistorting the whole image
+// 	  Mat res;
+// 	  distortionModel.CreateUndistortFull(camera->rawImage,res);
+// 	  imwrite( "/home/yvonne/Desktop/pic/field/undistorted.jpg", res );
+// 		
+// 	  cv::imshow("Undistorted",res);   
+// 	  cv::waitKey(1);
+ 	
+	
 	
 
 	
-// 	Scalar m = mean(channels[2](Rect(0,200,640,480-200)));
-// 	cout<<"b= "<<m<<endl;
+// 	Scalar m = mean(channels[2](cv::Rect(0,200,640,480-200)));
+// // 	cout<<"v= "<<m.val[0]<<endl;
+// 	
+// 	cout<<  m.val[0]/2<<endl;
 // 	if(m.val[0]>100) m.val[0]=100;  
 // 	if(m.val[0]<41) m.val[0]=41;	
 // 	params.ballhsv.v0->set(50+ ((m.val[0]-41)/59.)*70.);
@@ -153,28 +172,33 @@ void Vision::update()
 // 	CameraFrame.Brightness_Channel = Mat::zeros(CameraFrame.rawHSV.size(), CV_8UC1);
 
 	
+	ros::Time t2 = ros::Time::now();
 	CameraFrame.Brightness_Channel = channels[2].clone();
-	Mat GreenBinary = Mat::zeros(H,W, CV_8UC1);
+	CameraFrame.GreenBinary = Mat::zeros(H,W, CV_8UC1);
 	
 	cv::inRange(CameraFrame.rawHSV, Scalar(params.fieldhsv.h0->get(), params.fieldhsv.s0->get(), params.fieldhsv.v0->get()),
-		                    Scalar(params.fieldhsv.h1->get(), params.fieldhsv.s1->get(), params.fieldhsv.v1->get()), GreenBinary);
+		                    Scalar(params.fieldhsv.h1->get(), params.fieldhsv.s1->get(), params.fieldhsv.v1->get()), CameraFrame.GreenBinary);
 	
-	
+// 	cv::imshow("binaryImgs0 ball",CameraFrame.GreenBinary);
+// 	imwrite( "/home/yvonne/Desktop/pic/field/GreenBinary.jpg", CameraFrame.GreenBinary );
+// 	cv::waitKey(1);
 
 	
 // 	// ***************************** //
 // 	// * 2. Find Field             * //
 // 	// ***************************** //
 	
-	if( ! FieldFinder.FindFieldConvexHull(GreenBinary, CameraFrame.fieldConvexHullMat, CameraFrame.fieldConvexHullPoints,  CameraFrame. m_Top)){
+	if( ! FieldFinder.FindFieldConvexHull(CameraFrame.GreenBinary, CameraFrame.fieldConvexHullMat, CameraFrame.fieldConvexHullPoints,  CameraFrame. m_Top)){
 	  cout<<"No Field convexhull be found." << endl;
 	  return;
 	}
 	
+// 	if( ! FieldFinder.FindFieldConvexHull(GreenBinary, CameraFrame.fieldConvexHullPoints,  CameraFrame. m_Top)){
+// 	  cout<<"No Field convexhull be found." << endl;
+// 	  return;
+// 	}
 	
-// 	     cv::imshow("CameraFrame.fieldConvexHullMat",CameraFrame.fieldConvexHullMat);
-// 	     cv::waitKey(1);
-// 	
+	
 
      
      	hsvRangeC ranges[3];
@@ -193,6 +217,13 @@ void Vision::update()
 	
 	FieldFinder.ColorClassification(CameraFrame.rawHSV, CameraFrame.fieldConvexHullMat, binaryImgs,ranges, inTemplate, 3);
        
+	ROS_ERROR("time FindField : %f", (ros::Time::now() - t2).toSec());
+	
+	
+// 	cv::imshow("binaryImgs[BLACK_C]",binaryImgs[BLACK_C]);
+// 	imwrite( "/home/yvonne/Desktop/pic/obstacle/BLACK_C.jpg", binaryImgs[BLACK_C] );
+// 	cv::waitKey(1);
+	
 
 // 	// ***************************** //
 // 	// * 3. Find Obstacles           * //
@@ -200,16 +231,10 @@ void Vision::update()
 	CameraFrame.ObstacleConvexHull.clear();
 	ObstacleFinder.GetObstacleContours( binaryImgs[BLACK_C],CameraFrame.ObstacleConvexHull);
 	
-	
 
-	
-	
-//        GoalPostsFinder.findGoalPosts(CameraFrame.rawHSV,CameraFrame.Brightness_Channel, CameraFrame.binaryImgs[GOAL_C],FieldFinder.fieldConvexHullPoints);
+// 	WhiteObjectFinder.GetwhiteSegments( CameraFrame.Brightness_Channel , CameraFrame.fieldConvexHullMat, CameraFrame.WhiteObjectConvexHull);
+//      GoalPostsFinder.findGoalPosts(CameraFrame.rawHSV,CameraFrame.Brightness_Channel, CameraFrame.binaryImgs[GOAL_C],FieldFinder.fieldConvexHullPoints);
 
-
-//  	
-//      cv::imshow("binaryImgs0 ball",CameraFrame.binaryImgs[0]);
-// 	cv::waitKey(1);
 	
 	
 // 	// ********************************* //
@@ -218,8 +243,9 @@ void Vision::update()
 
 // 	LineFinder.findLines(CameraFrame);
 // 	LineFinder.findSkeletons(CameraFrame);
+	ros::Time t3 = ros::Time::now();
 	LineFinder.findBoundingRects(CameraFrame);
-	
+	ROS_ERROR("time findBoundingRects  : %f", (ros::Time::now() - t3).toSec());
 // 	if(LineFinder.Rectangles.size()<2){return;}
 	
 	
@@ -230,10 +256,10 @@ void Vision::update()
 	
 	//§§§§§§§§§§§§§§§§§§§§§§§§//
 // 	NodeFinder.mainLoop(CameraFrame);
-	
+	ros::Time t4 = ros::Time::now();
 	NodeFinder.getRectangle(LineFinder.Rectangles );
 	NodeFinder.findNodeGraph(CameraFrame);
-	
+	ROS_ERROR("time findNodeGraph  : %f", (ros::Time::now() - t4).toSec());
 // 	vector<Point2f> goalPositionOnReal;
 // 	vector<LineSegment> resLines, alllL;
 
@@ -247,7 +273,7 @@ void Vision::update()
 	
 	//§§§§§§§§§§§§§§§§§§§§§§§§//
 
-    
+        
 	CameraFrame.forw_Proj.onInit(CameraFrame.header.stamp);
 
 
@@ -259,8 +285,26 @@ void Vision::update()
 	//hillclimb method
 // 	poseUpdate.mainLoop(robotPoseS.pose, CameraFrame, pointMatcher, NodeFinder);
 	
+	ros::Time t5 = ros::Time::now();
+	if(params.debug.useSolvePnP->get()){
+	  poseUpdate.IterativeLeastSquare(robotPoseS.pose, CameraFrame, NodeFinder);
+	  if(params.debug.useRansac->get()){
+	    ROS_ERROR("time Ransac + EPnP  : %f", (ros::Time::now() - t5).toSec());
+	    
+	  }
+	  else{ ROS_ERROR("time EPnP  : %f", (ros::Time::now() - t5).toSec());}
+	  
+	  
+	}
+        else{
+	  //naieve hill climbing method 
+	        poseUpdate.mainLoop(robotPoseS.pose, CameraFrame, NodeFinder);
+	        ROS_ERROR("time HillClimbing  : %f", (ros::Time::now() - t5).toSec());
+	}
+	
+// 	ROS_ERROR("time findNodeGraph  : %f", (ros::Time::now() - t4).toSec());
 // 	
-	poseUpdate.mainLoop(robotPoseS.pose, CameraFrame, NodeFinder);
+	
 	
 	
 		//for vis
@@ -268,7 +312,7 @@ void Vision::update()
 	CameraFrame.forw_Proj.GetModelLineComps();
 	AssociateData.AssociateDetectionToModel( CameraFrame, NodeFinder, error);
 	AssociateData.AssociateModelToDetection( CameraFrame, NodeFinder, error);
-	
+// 	 cout<<"0    "<<robotPoseS.pose.position.x << "  "<<robotPoseS.pose.position.y<< "  "<<robotPoseS.pose.position.z<<endl;
 	
 	
 	
@@ -282,11 +326,13 @@ void Vision::update()
 // 	 cout<<"conf "<<conf<<endl;
 	
 	if(params.debug.useKalmanFilter->get()){
+	      ros::Time t6 = ros::Time::now();
 	      poseFilter.setCurTime(CameraFrame.header.stamp);
 	      poseFilter.getMeasurementCov( poseUpdate.cov);
 	      poseFilter.mainLoop( robotPoseS, 1.0 );
 	      poseFilter.getRobotPose(robotPoseS);
 	      robotPose_pub_KF.publish(poseFilter.estimate_pose_cov);
+	      ROS_ERROR("time KalmanFilter  : %f", (ros::Time::now() - t6).toSec());
 	}
 
 
@@ -354,17 +400,16 @@ void Vision::update()
 	CameraFrame.forw_Proj.TfRobotPose2CamPose( robotPoseS ,  camPoseS );
         
 	
-
-	
-	
-	
 	
 // 	// ******************************************************************//
 // 	// ************************ Particles Filter*************************//
 // 	// ****************************************************************** //
-// 	particlefilter.setCurTime(CameraFrame.header.stamp);
-//         particlefilter.setdetectedLines(LineFinder.LinesOnImg_After_Merged, LineFinder.MeasConf);
-// 	particlefilter.run();
+	
+	if(params.debug.useParticleFilter->get()){
+	    particlefilter.setCurTime(CameraFrame.header.stamp);
+// 	    particlefilter.setdetectedLines(LineFinder.LinesOnImg_After_Merged, LineFinder.MeasConf);
+// 	    particlefilter.run(); 
+	}
 // 	//The output of particle filter pose
 //         lineMatcher.backw_Proj.onInit(CameraFrame.header.stamp);
 // 	lineMatcher.backw_Proj.setRobotPose( particlefilter.robotPose.pose);
@@ -377,7 +422,7 @@ void Vision::update()
 	// ********************************** //
 	// * 7. visualization of the output * //
 	// ********************************** //
-	
+	ros::Time t7 = ros::Time::now();
 // 	camera pose
 	if(params.debug.showRobPose->get()){
 	  
@@ -399,10 +444,14 @@ void Vision::update()
              cv::Mat fullrgbframe = (camera->rawImage).clone();
              //field hull
 	     vector<vector<cv::Point> > tmphulls = vector<vector<cv::Point> >(1,CameraFrame.fieldConvexHullPoints);
-             drawContours(fullrgbframe, tmphulls, -1,  cv::Scalar(200, 0, 50), 2, 8);
+             drawContours(fullrgbframe, tmphulls, -1,   cv::Scalar(0,200,255), 2, 8);
 	     
 	     //obstacles
-	     drawContours(fullrgbframe, CameraFrame.ObstacleConvexHull, -1,  cv::Scalar(0, 0, 0), 2, 8);
+	     drawContours(fullrgbframe, CameraFrame.ObstacleConvexHull, -1,  cv::Scalar(20, 150, 50), 2, 8);
+// 	     drawContours(fullrgbframe, CameraFrame.WhiteObjectConvexHull, -1,  cv::Scalar(0, 200, 0), 2, 8);
+	    
+// 	     imwrite( "/home/yvonne/Desktop/pic/obstacle/input.jpg", fullrgbframe );
+	     imwrite( "/home/yvonne/Desktop/video/pictures/input.jpg", fullrgbframe );
 	     
 	    sensor_msgs::Image img_out;
 	    img_out.header = CameraFrame.header;
@@ -449,7 +498,7 @@ void Vision::update()
 		  img_out1.data.assign(skeletonPixels.datastart, skeletonPixels.dataend);
 		  image_pub_1.publish(img_out1);
 	  
-	  
+	          imwrite( "/home/yvonne/Desktop/video/pictures/skeletonPixels.jpg", skeletonPixels );
 	}
 	
 	
@@ -459,7 +508,14 @@ void Vision::update()
 	
 	      cv::Mat nodeGraph(cv::Size(W,H),CV_8UC3,cv::Scalar(150, 150, 150));
 	      nodeGraph_undistorted =cv::Mat(cv::Size(siX,siY),CV_8UC3,cv::Scalar(150, 150, 150));
+	      
+	      
+	      
+	       vector<vector<cv::Point> > hulls = vector<vector<cv::Point> >(1,FieldFinder.fieldConvexHullPointsUndistort);
+//              drawContours(nodeGraph_undistorted, hulls, -1,  cv::Scalar(100, 0, 10), 2, 8);
 	     
+	      
+	      
 	      LinearGraph_Buffer::iterator it_;
       
 	      int colorIdx=-1;
@@ -558,6 +614,10 @@ void Vision::update()
 		      img_out3.encoding = std::string("bgr8");
 		      img_out3.data.assign(nodeGraph_undistorted.datastart, nodeGraph_undistorted.dataend);
 		      image_pub_3.publish(img_out3);
+		      
+		      imwrite( "/home/yvonne/Desktop/video/pictures/nodeGraph.jpg", nodeGraph );
+		      imwrite( "/home/yvonne/Desktop/video/pictures/nodeGraph_undistorted.jpg", nodeGraph_undistorted );
+		      
 
 	  }
 	    
@@ -734,11 +794,15 @@ void Vision::update()
 	  img_out6.encoding = std::string("bgr8");
 	  img_out6.data.assign(correspondence_rev.datastart, correspondence_rev.dataend);
 	  image_pub_6.publish(img_out6);
+	  imwrite( "/home/yvonne/Desktop/video/pictures/correspondence.jpg", correspondence );
+	  imwrite( "/home/yvonne/Desktop/video/pictures/correspondence_rev.jpg", correspondence_rev );
+	  
+	  
     }
     
     
     
-    
+     ROS_ERROR("time visualization  : %f", (ros::Time::now() - t7).toSec());
     
 
 	
@@ -1011,27 +1075,35 @@ int main( int argc, char** argv ) {
     double fpsData = RATE;
     // determines the number of loops per second 
      VisionRate loop_rate(RATE, true);
+     int loopCounter=0;
+     
+     float avg_update_frame_rate=30;;
+     
     // loop stops if the node stops, e.g. by getting a kill signal 
     while (soccer_vision.nh.ok())
     {
-      
+          loopCounter++;
 	  cpu_timer timer;
 	  std_msgs::Int64 time_msg;
 
-
+          ros::Time t1 = ros::Time::now();   
 // 	  if(soccer_vision.CameraFrame.imagecounter >0 ){
-	      soccer_vision.update();
-	   
+	      
+	     soccer_vision.update();
+	    
 // 	  }
 // 	  else{
 // 	    ROS_INFO("No Input Image Message.");
 // 	  }
+	  if(loopCounter > 4){
+	      fpsData = (0.9 * fpsData) + (0.1 * (1000000000l / timer.elapsed().wall)); // pow(10,9)nanosecond = 1 second 
+	      time_msg.data = fpsData;
 	      
-	  fpsData = (0.9 * fpsData) + (0.1 * (1000000000l / timer.elapsed().wall));
-	  time_msg.data = fpsData;
-// 	  cout<< fpsData<<endl;
-	 
-	  
+	      ROS_ERROR("time Update Loop  : %f, %f,  %f", (ros::Time::now() - t1).toSec() , timer.elapsed().wall/ 1000000000l ,  0.9*avg_update_frame_rate + (0.1 *1.0/(ros::Time::now() - t1).toSec()));
+	      
+	      cout<< fpsData<<endl;
+	      ROS_ERROR("-----------------------------------------------------" );
+	  }
 // 	  if(params.debug.publishTime->get()){
 	      fps_pub.publish(time_msg);
 	    

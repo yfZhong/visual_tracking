@@ -13,13 +13,43 @@ FindLines::FindLines()/*:filtered_data(H * W,0)*/{
 //     diagonal_data135 = new int[W*H]; 
    
     MeasConf = 0;
+    count=0;
+//     odom_sub = nodeHandle.subscribe("/gait/odometry", 1, &FindLines::getOdom, this);
+    heading_sub_robotstate = nodeHandle.subscribe("/robotmodel/robot_heading", 1, &FindLines::handleHeadingData, this);
+    num_change_min_ske = 100;
+    delta1 =0;
 
+    mean_b = 45;
+    min_skele_shift=0;
+   
+    
+    
+    
+    
 }
 
 
 FindLines::~FindLines(){     
 
   
+}
+
+
+void FindLines::getOdom(const gait_msgs::GaitOdomConstPtr & msg)//use motionOdom
+{   
+
+		curOdom.x = msg->odom2D.x;
+		curOdom.y = msg->odom2D.y;
+		curOdom.z = msg->odom2D.theta;
+		
+		cout<<" "<< curOdom.x <<" "<< curOdom.y <<" "<< curOdom.z <<endl;
+		
+}
+
+//from Hafez
+double FindLines::getHeading()
+{       headingOffset = params.hillclimbing.HeadingOffset->get() ;
+        return m_Math::CorrectAngleRadian360(headingData.heading + headingOffset );
 }
 
 		
@@ -29,12 +59,12 @@ void FindLines::findSkeletons(FrameGrabber & CamFrm){
     m_Top= CamFrm.m_Top;
    
    
-//     boost::timer::cpu_timer timer;
+    boost::timer::cpu_timer timer;
     // apply line filters to detect lines in different orientations. Line point candidates would have higher respondses.
-    applyLineFilter(/* in */CamFrm.Brightness_Channel, /* out */CamFrm.weightedWhiteValues);
+    applyLineFilter(/* in */CamFrm.Brightness_Channel, CamFrm.GreenBinary, /* out */CamFrm.weightedWhiteValues);
      
-//      fpsData = (0.9 * fpsData) + (0.1 * (1000000000l / timer.elapsed().wall));
-//      cout<< fpsData<<endl;
+     fpsData = (0.9 * fpsData) + (0.1 * (1000000000l / timer.elapsed().wall));
+     cout<< fpsData<<endl;
  
 //       return;
     
@@ -176,21 +206,44 @@ void FindLines::findSkeletons(FrameGrabber & CamFrm){
 
 }
 
+
+
+
 void FindLines::findBoundingRects(FrameGrabber & CamFrm){
   
   
   m_Top= CamFrm.m_Top;
-   
-  applyLineFilter(/* in */CamFrm.Brightness_Channel, /* out */CamFrm.weightedWhiteValues);
+  
     
+   
+  
+
+  //time: 0.005
+  applyLineFilter(/* in */CamFrm.Brightness_Channel,CamFrm.GreenBinary, /* out */CamFrm.weightedWhiteValues);
+   
+  
+   ros::Time t = ros::Time::now();
+  
   RetrieveSkeleton(/* in */CamFrm.fieldConvexHullMat, /* in */CamFrm.weightedWhiteValues, /* out */ detectedPoins );
+  
+   
+  
+  removeObstacleBoarder (/* in */ CamFrm.ObstacleConvexHull  ,/* in_out */ detectedPoinsWithType );
+  
+  
+  if(CamFrm.imagecounter >45 ){min_skele_shift = 5;}
+  else{min_skele_shift = 0;}
     
    //detectedPoins[i].y: 0 -H
   //skeletonMatrix_tmp: W * (H -m_Top)
   
   findSquares(CamFrm);
+//   ROS_ERROR("time of the whole function : %f", (ros::Time::now() - t).toSec());
+  
   //squars: 0-H uars::
   findRectangle_Buffer();
+  
+ 
   //Rectangles: 0 -H
   
 
@@ -237,11 +290,12 @@ void FindLines::findSquares(FrameGrabber & CamFrm){
     int H_tmp = H - m_Top;
 	  
     int k_max = params.square.Max_K->get();
+    int k_max_border = params.square.Max_K_border->get();
     int MaxNeighborDist = params.square.MaxNeighborDist->get();
     
     Mat skeletonCount[k_max];
     for(int k=0; k<k_max;++k){ skeletonCount[k] = Mat::zeros(cv::Size(W,H_tmp ), CV_8UC1);} 
-//      skeletonCount[0] = skeletonMatrix_tmp;
+//      skeletonCount[0] = keletonMatrix_tmp;
    
      for ( int x = 0; x < W ; x++ ) { // [0]
                 // * Loop through columns. * //
@@ -259,6 +313,7 @@ void FindLines::findSquares(FrameGrabber & CamFrm){
                 // * Process the pixels under m_FieldBoundary[x]-params.field.FieldBoarder->get()/2 for skeleton. * //
                 for ( int y = 0; y < H_tmp -(2*k); y++ ) {// [1]
 		  
+// 		   if( skeletonMatrix_tmp.at<uchar>(y , x ) == 0){continue;}
 		  int count = 0;
 		  for(int i= 2*(k-1) +1; i<=2* k ;++i){
 		    	  for(int j= 0; j<= 2*(k-1);++j){
@@ -301,13 +356,14 @@ void FindLines::findSquares(FrameGrabber & CamFrm){
 	int offset_corner[4][4][2]  = {{{0,0},{2,0},{0,2},{2,2}}, {{-2,0},{0,0},{-2,2},{0,2}},{{0,-2},{2,-2},{0,0},{2,0}},{{-2,-2},{0,-2},{-2,0},{0,0}}};
 	
 
-
+        int k_max_tmp = k_max;
 	
 	for ( unsigned int i = 0; i < detectedPoins.size() ; i++ ) {//[1] 
 	  
 	  int x = detectedPoins[i].x;
 	  int y = detectedPoins[i].y- m_Top;
 	  squars_for_check.clear();
+	  
 	      
 	      if(visited_mat.at<uchar>(y , x ) >0 ){continue;}// [2]
 		
@@ -316,12 +372,17 @@ void FindLines::findSquares(FrameGrabber & CamFrm){
 		    
 		     
 		     //(1)find a corrner skeleton point
-		     for(int k = 1; k<k_max;++k){ // [3.1]
+		     if(y< 0.3*(H-m_Top) || x<0.1*W || x> 0.9*W){k_max_tmp = k_max_border; }
+		     else{k_max_tmp = k_max; }
+		     
+		     for(int k = 1; k<k_max_tmp;++k){ // [3.1]
 		         
 			    squareL_k = k;
 			    if(x-k<0|| x+k>=W||y-k<0|| y+k>=H_tmp){break;}
 			    
 			    int meetOtherSquare=0;
+			    
+			    //check whether will overlap with previous squares
 			    for(int x_i = x-k;x_i<=x+k; ++x_i){ 
 			      if(visited_mat.at<uchar>(y-k, x_i ) >0  ){
 				  squareL_k--;
@@ -394,11 +455,10 @@ void FindLines::findSquares(FrameGrabber & CamFrm){
 			cx = x -squareL_k;
 			cy = y - squareL_k;
 			corner_idx =0;
-			
-			
+
 		      }
 		      else{
-			for(int k = k_tmp; k<k_max;++k){
+			for(int k = k_tmp; k<k_max_tmp;++k){
 			    squareL_k = k;
 			    
 			    if(cx + offset_corner[corner_idx][0][0]*k  <0|| cx+ offset_corner[corner_idx][3][0]*k>=W
@@ -409,14 +469,88 @@ void FindLines::findSquares(FrameGrabber & CamFrm){
 			      int center_x= cx + 0.5*(offset_corner[corner_idx][0][0]*squareL_k +offset_corner[corner_idx][3][0]*squareL_k);
 			      int center_y= cy + 0.5*(offset_corner[corner_idx][0][1]*squareL_k +offset_corner[corner_idx][3][1]*squareL_k);
 			      
-			      for(int x_i = center_x -squareL_k ;x_i<=center_x +squareL_k; ++x_i){
-				  for(int y_i = center_y  -squareL_k ;y_i<= center_y +squareL_k; ++y_i){
-				      if(visited_mat.at<uchar>(y_i, x_i ) >0){meetOtherSquare = 1;}
-				      if(meetOtherSquare ==1 ){ squareL_k--;break;}
+// 			      for(int x_i = center_x -squareL_k ;x_i<=center_x +squareL_k; ++x_i){
+// 				  for(int y_i = center_y  -squareL_k ;y_i<= center_y +squareL_k; ++y_i){
+// 				      if(visited_mat.at<uchar>(y_i, x_i ) >0){meetOtherSquare = 1;}
+// 				      if(meetOtherSquare ==1 ){ squareL_k--;break;}
+// 				  }
+// 				  if(meetOtherSquare ==1 ){ break;}
+// 			      }
+// 			      if(meetOtherSquare ==1 ){ break;}
+			      
+			      if(corner_idx==0){			      
+				  for(int x_i = center_x +squareL_k-1 ;x_i<=center_x +squareL_k; ++x_i){
+				      for(int y_i = center_y  -squareL_k ;y_i<= center_y +squareL_k-2; ++y_i){
+					  if(visited_mat.at<uchar>(y_i, x_i ) >0){meetOtherSquare = 1;}
+					  if(meetOtherSquare ==1 ){ squareL_k--;break;}
+				      }
+				      if(meetOtherSquare ==1 ){ break;}
 				  }
-				  if(meetOtherSquare ==1 ){ break;}
+				 for(int x_i = center_x - squareL_k ;x_i<=center_x +squareL_k; ++x_i){
+				      for(int y_i = center_y  + squareL_k-1 ;y_i<= center_y +squareL_k; ++y_i){
+					  if(visited_mat.at<uchar>(y_i, x_i ) >0){meetOtherSquare = 1;}
+					  if(meetOtherSquare ==1 ){ squareL_k--;break;}
+				      }
+				      if(meetOtherSquare ==1 ){ break;}
+				  }
+				
 			      }
-			      if(meetOtherSquare ==1 ){ break;}
+			      else if(corner_idx==1){			      
+				  for(int x_i = center_x -squareL_k;x_i<=center_x -squareL_k+1; ++x_i){
+				      for(int y_i = center_y  -squareL_k ;y_i<= center_y +squareL_k-2; ++y_i){
+					  if(visited_mat.at<uchar>(y_i, x_i ) >0){meetOtherSquare = 1;}
+					  if(meetOtherSquare ==1 ){ squareL_k--;break;}
+				      }
+				      if(meetOtherSquare ==1 ){ break;}
+				  }
+				 for(int x_i = center_x - squareL_k ;x_i<=center_x +squareL_k; ++x_i){
+				      for(int y_i = center_y  + squareL_k-1 ;y_i<= center_y +squareL_k; ++y_i){
+					  if(visited_mat.at<uchar>(y_i, x_i ) >0){meetOtherSquare = 1;}
+					  if(meetOtherSquare ==1 ){ squareL_k--;break;}
+				      }
+				      if(meetOtherSquare ==1 ){ break;}
+				  }
+				
+			      }
+			      else if(corner_idx==2){			      
+				  for(int x_i = center_x +squareL_k -1;x_i<=center_x +squareL_k; ++x_i){
+				      for(int y_i = center_y  -squareL_k +2 ;y_i<= center_y +squareL_k; ++y_i){
+					  if(visited_mat.at<uchar>(y_i, x_i ) >0){meetOtherSquare = 1;}
+					  if(meetOtherSquare ==1 ){ squareL_k--;break;}
+				      }
+				      if(meetOtherSquare ==1 ){ break;}
+				  }
+				 for(int x_i = center_x - squareL_k ;x_i<=center_x +squareL_k; ++x_i){
+				      for(int y_i = center_y  - squareL_k ;y_i<= center_y -squareL_k +1; ++y_i){
+					  if(visited_mat.at<uchar>(y_i, x_i ) >0){meetOtherSquare = 1;}
+					  if(meetOtherSquare ==1 ){ squareL_k--;break;}
+				      }
+				      if(meetOtherSquare ==1 ){ break;}
+				  }
+				
+			      }
+			       else if(corner_idx==3){			      
+				  for(int x_i = center_x -squareL_k;x_i<=center_x -squareL_k+1; ++x_i){
+				      for(int y_i = center_y  -squareL_k+2 ;y_i<= center_y +squareL_k; ++y_i){
+					  if(visited_mat.at<uchar>(y_i, x_i ) >0){meetOtherSquare = 1;}
+					  if(meetOtherSquare ==1 ){ squareL_k--;break;}
+				      }
+				      if(meetOtherSquare ==1 ){ break;}
+				  }
+				 for(int x_i = center_x - squareL_k ;x_i<=center_x +squareL_k; ++x_i){
+				      for(int y_i = center_y  - squareL_k ;y_i<= center_y -squareL_k +1; ++y_i){
+					  if(visited_mat.at<uchar>(y_i, x_i ) >0){meetOtherSquare = 1;}
+					  if(meetOtherSquare ==1 ){ squareL_k--;break;}
+				      }
+				      if(meetOtherSquare ==1 ){ break;}
+				  }
+				
+			      }
+			          if(meetOtherSquare ==1 ){ break;}
+			      
+			      
+			      
+			      
 			      
 			
 			      std::vector<float>   query(dim);
@@ -527,6 +661,10 @@ void FindLines::findSquares(FrameGrabber & CamFrm){
 			  squars_for_check.pop_back();
 			  int fix_corner_x, fix_corner_y,fix_corner_idx;
                           
+
+			   if(y< 0.3*(H-m_Top) || x<0.1*W || x> 0.9*W){k_max_tmp = k_max_border; }
+			   else {k_max_tmp = k_max;  }
+			  
 			  for(int _x = s_x-3*s_K-1;  _x <=s_x+s_K; _x++){
 			      int _y = s_y-3*s_K-1;
 			      if(_x>=0&&_x<W &&_y>=0 && skeletonCount[s_K].at<uchar>(_y, _x ) > value){
@@ -635,7 +773,7 @@ void FindLines::findSquares(FrameGrabber & CamFrm){
 					    if(corner_num <=2){//too small k
 						
 						int s_K_tmp = s_K;
-						for(int new_k = s_K_tmp +1;new_k<k_max; new_k++ ){
+						for(int new_k = s_K_tmp +1;new_k<k_max_tmp; new_k++ ){
 							    corner_num =1;
 							    s_K = new_k;
 							    
@@ -867,8 +1005,8 @@ void FindLines::findRectangle_Buffer(){
 		      }
 		}
 		if( pintsInSquare.size()>MinPointNum ){
-// 			cv::Rect rect = cv::boundingRect(pintsInSquare);
-			cv::Rect rect(x-s_k, y-s_k, s_k *2+1, s_k *2+1);
+			cv::Rect rect = cv::boundingRect(pintsInSquare);
+// 			cv::Rect rect(x-s_k, y-s_k, s_k *2+1, s_k *2+1);
 // 			rect.y += m_Top;
 // 			
 			M_rect m_rect;
@@ -912,26 +1050,32 @@ void FindLines::findRectangle_Buffer(){
 
 
 
-void FindLines::applyLineFilter(/*in*/cv:: Mat Brightness_Channel,/*out*/float ( & weightedWhiteValues )[ H ][ W ]){
+void FindLines::applyLineFilter(/*in*/cv:: Mat & Brightness_Channel,/*in*/cv:: Mat & greenBinary, /*out*/float ( & weightedWhiteValues )[ H ][ W ]){
+  
+     Scalar m = mean(Brightness_Channel(cv::Rect(0,200,640,480-200)));
+//      cout<<  m.val[0]/2<<endl;
+     mean_b= m.val[0]/2;
     float div_pct1 = params.line.Div1->get();
     float div_pct2 = params.line.Div2->get();//from  top to bottom [0-div_pct1, div_pct1-div_pct2, div_pct2-1]
+      
+    
     float div_pct3 = 0.9;
    
-    int offset_size_9 = 9; int half_size_9 = 4;
-    int offset_v_9[9][2]  = {{0,-4},{0,-3},{0,-2},{0,-1},{0,0},{0,1},{0,2},{0,3},{0,4}}; //offset for vertical and horizontal kernel
-    int offset_h_9[9][2]  = {{-4,0},{-3,0},{-2,0},{-1,0},{0,0},{1,0},{2,0},{3,0},{4,0}}; //offset for vertical and horizontal kernel
-    int offset_d45_9[9][2]  = {{4,-4},{3,-3},{2,-2},{1,-1},{0,0},{-1,1},{-2,2},{-3,3},{-4,4}}; //offset for diagonal kernel
-    int offset_d135_9[9][2]  = {{-4,-4},{-3,-3},{-2,-2},{-1,-1},{0,0},{1,1},{2,2},{3,3},{4,4}}; //offset for diagonal kernel
-    
-    int DOG_kernel_9[9] = {-3,-5,1,4,6,4,1,-5,-3}; //difference of gaussian kernel
-    
-//     int offset_size_9 = 7; int half_size_9 = 3;
-//     int offset_v_9[7][2]  = {{0,-3},{0,-2},{0,-1},{0,0},{0,1},{0,2},{0,3}}; //offset for vertical and horizontal kernel
-//     int offset_h_9[7][2]  = {{-3,0},{-2,0},{-1,0},{0,0},{1,0},{2,0},{3,0}}; //offset for vertical and horizontal kernel
-//     int offset_d45_9[7][2]  = {{3,-3},{2,-2},{1,-1},{0,0},{-1,1},{-2,2},{-3,3}}; //offset for diagonal kernel
-//     int offset_d135_9[7][2]  = {{-3,-3},{-2,-2},{-1,-1},{0,0},{1,1},{2,2},{3,3}}; //offset for diagonal kernel
+//     int offset_size_9 = 9; int half_size_9 = 4;
+//     int offset_v_9[9][2]  = {{0,-4},{0,-3},{0,-2},{0,-1},{0,0},{0,1},{0,2},{0,3},{0,4}}; //offset for vertical and horizontal kernel
+//     int offset_h_9[9][2]  = {{-4,0},{-3,0},{-2,0},{-1,0},{0,0},{1,0},{2,0},{3,0},{4,0}}; //offset for vertical and horizontal kernel
+//     int offset_d45_9[9][2]  = {{4,-4},{3,-3},{2,-2},{1,-1},{0,0},{-1,1},{-2,2},{-3,3},{-4,4}}; //offset for diagonal kernel
+//     int offset_d135_9[9][2]  = {{-4,-4},{-3,-3},{-2,-2},{-1,-1},{0,0},{1,1},{2,2},{3,3},{4,4}}; //offset for diagonal kernel
 //     
-//     int DOG_kernel_9[7] = {-1,-3,2,4,2,-3,-1}; //difference of gaussian kernel
+//     int DOG_kernel_9[9] = {-3,-5,1,4,6,4,1,-5,-3}; //difference of gaussian kernel
+    
+    int offset_size_9 = 7; int half_size_9 = 3;
+    int offset_v_9[7][2]  = {{0,-3},{0,-2},{0,-1},{0,0},{0,1},{0,2},{0,3}}; //offset for vertical and horizontal kernel
+    int offset_h_9[7][2]  = {{-3,0},{-2,0},{-1,0},{0,0},{1,0},{2,0},{3,0}}; //offset for vertical and horizontal kernel
+    int offset_d45_9[7][2]  = {{3,-3},{2,-2},{1,-1},{0,0},{-1,1},{-2,2},{-3,3}}; //offset for diagonal kernel
+    int offset_d135_9[7][2]  = {{-3,-3},{-2,-2},{-1,-1},{0,0},{1,1},{2,2},{3,3}}; //offset for diagonal kernel
+    
+    int DOG_kernel_9[7] = {-1,-3,2,4,2,-3,-1}; //difference of gaussian kernel
     
  
 
@@ -949,7 +1093,15 @@ void FindLines::applyLineFilter(/*in*/cv:: Mat Brightness_Channel,/*out*/float (
     
     
      int kernel_type = 3; // 3 times larger than the first kernel 
+     
+//      uchar* greenV = greenBinary.data;
+//      uchar* brightnessV = Brightness_Channel.data;
+     
 	 //apply the dfg kernel
+	 
+	   ros::Time t = ros::Time::now();
+	 
+	 
          for ( int i = 0; i< W; i++){  
 	    for ( int j = m_Top ; j< H; j++){   
 // 	    for ( int j = 0; j< H; j++){   
@@ -969,7 +1121,10 @@ void FindLines::applyLineFilter(/*in*/cv:: Mat Brightness_Channel,/*out*/float (
 		
 
 	        if(i<half_size_9*kernel_type+1 || i>= W -half_size_9*kernel_type-1 || j<( m_Top   + half_size_9*kernel_type+1) || j>= H -half_size_9*kernel_type-1
-		    || Brightness_Channel.at<uchar>( j , i) < params.line.MinBrightnessValue->get()){ continue;}
+		    || Brightness_Channel.at<uchar>( j , i) < params.line.MinBrightnessValue->get() /*|| greenV[0] == 255*/ ){		
+// 		     greenV +=1;
+// 		     brightnessV+=1; 
+		     continue;}
 	
 		int tmp_v = 0, tmp_h = 0, tmp_d45 =0 ,tmp_d135=0;
 		
@@ -1013,13 +1168,16 @@ void FindLines::applyLineFilter(/*in*/cv:: Mat Brightness_Channel,/*out*/float (
 	    
 		if(max_v <weightedWhiteValues[j][i]){max_v = weightedWhiteValues[(j)][ i];}
 		
+// 		greenV +=1;
+// 		brightnessV+=1;
 	    }
 	   
 	   
 	}
+
 	  
-
-
+   
+// 	  ROS_ERROR("time of the kernel function : %f", (ros::Time::now() - t).toSec());
 
 
 // 	 for ( int j =0; j< H; j++){
@@ -1036,14 +1194,15 @@ void FindLines::applyLineFilter(/*in*/cv:: Mat Brightness_Channel,/*out*/float (
 // 	   
 // 	}
 
+
 	 for ( int j =  m_Top ; j< H; j++){
 	     for ( int i = 0; i< W; i++){
 		     weightedWhiteValues[j][ i] = (weightedWhiteValues[j][ i]-0.0)/(max_v-0.0) *255;  
-
 	     }
 	   
 	}
-
+ 
+//         ROS_ERROR("time of the normalize function : %f", (ros::Time::now() - t2).toSec());
 
     
 //     std::vector<float > test(H * W,0);
@@ -1064,6 +1223,20 @@ void FindLines::RetrieveSkeleton (/* in */cv:: Mat & fieldConvexHull, /* in */ c
 
 // 	    skeletonMatrix_tmp = Mat::zeros(fieldConvexHull.size(), CV_8UC1);
             skeletonMatrix_tmp = Mat::zeros(cv::Size(W, H - m_Top ), CV_8UC1);
+	    int MinSkeletonValue = params.line.MinSkeletonValue->get() + min_skele_shift;
+	    
+
+	    
+	    if( heading_speed>=0.08){num_change_min_ske=0; delta1 = 14; }
+	    else if( heading_speed>=0.05 && !( delta1 = 10&& num_change_min_ske <6)){num_change_min_ske=2; delta1 = 9; }
+	    else if( heading_speed>=0.03 && !( delta1 > 6 && num_change_min_ske <6)){num_change_min_ske=3; delta1 = 5;}
+	    
+	   
+	   if(abs(mean_b - 48) < 3 ){ MinSkeletonValue +=14; }
+	   else{ if( num_change_min_ske <6){MinSkeletonValue += delta1;  num_change_min_ske++; }}
+	    
+	    
+//            cout<<"MinSkeletonValue  "<<MinSkeletonValue<<endl;
 	    
 	    detectedPoins.clear();
 	    detectedPoinsWithType.clear();
@@ -1077,7 +1250,7 @@ void FindLines::RetrieveSkeleton (/* in */cv:: Mat & fieldConvexHull, /* in */ c
                     }
                     register unsigned int vote = 0;
                     register int val = matrix[ y ][ x ];
-		    if ( val < params.line.MinSkeletonValue->get() ) { // [2]
+		    if ( val < MinSkeletonValue ) { // [2]
                        continue;
                     }
                     else { // [2]
@@ -1434,7 +1607,7 @@ void FindLines::findLines(FrameGrabber & CamFrm){
     m_Top= CamFrm.m_Top;
 
     // apply line filters to detect lines in different orientations. Line point candidates would have higher respondses.
-    applyLineFilter(/* in */CamFrm.Brightness_Channel, /* out */CamFrm.weightedWhiteValues);
+    applyLineFilter(/* in */CamFrm.Brightness_Channel, CamFrm.GreenBinary,/* out */CamFrm.weightedWhiteValues);
 
     RetrieveSkeleton(/* in */CamFrm.fieldConvexHullMat, /* in */CamFrm.weightedWhiteValues, /* out */ detectedPoins );
 //     removeObstacleBoarder (/* in */ CamFrm.binaryImgs[BLACK_C]  ,/* in_out */ detectedPoins );

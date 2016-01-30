@@ -17,7 +17,7 @@
 
       return distanceA < distanceB;
     }
-  vector<cv::Point2f> LineSegment::GetMidPoints( int count /*Means that lines count will be 2^count*/){
+    vector<cv::Point2f> LineSegment::GetMidPoints( int count /*Means that lines count will be 2^count*/){
 	    vector<LineSegment> lsList, lsListTmp;
 	    lsList.push_back(LineSegment(P1, P2));
 	    vector<Point2f> res;
@@ -51,6 +51,8 @@
 FindField::FindField(){
     H = params.camera.height->get();
     W = params.camera.width->get();
+    siX = params.camera.widthUnDistortion->get();
+    siY = params.camera.heightUnDistortion->get();
     m_Top = 0;
     MAX_DESTANCE_FROM_BOTTOM_OF_IMAGE= params.field.MaxDistanceFromBottomOfImage->get();
 
@@ -59,32 +61,23 @@ FindField::FindField(){
 
 
 
-bool FindField::FindFieldConvexHull(/* in */  cv::Mat GreenBinary, /* out */Mat &fieldConvectHullMat,vector<cv::Point> &fieldConvexHullPoints,/* out */int&  m_Top ){
+bool FindField::FindFieldConvexHull(/* in */  cv::Mat &GreenBinary, /* out */Mat &fieldConvectHullMat,vector<cv::Point> &fieldConvexHullPoints,/* out */int&  m_Top ){
    fieldConvexHullPoints.clear();
-   vector<cv::Point> fieldConvexHullPointsUndistort;
+//    vector<cv::Point> fieldConvexHullPointsUndistort;
    MAX_DESTANCE_FROM_BOTTOM_OF_IMAGE= params.field.MaxDistanceFromBottomOfImage->get();
-   //generating the binary image of green pixels
-//     Mat fieldBinary(H,W,CV_8UC1);
-    
-// 	memcpy(fieldBinary.data, greenPixels.data(),greenPixels.size()*sizeof(int));   
-//       for ( int j =0; j< H; j++){
-// 	for ( int i = 0; i< W; i++){  
-// 	   if(GreenBinary.at<uchar>(j,i)== 255){
-// 	     fieldBinary.at<uchar>(j,i) = 1;
-// 	   } 
-// 	   else{fieldBinary.at<uchar>(j,i) = 0;}
-// 	  }	     
-// 	}
-	
-//        Mat imgToshow(H,W,CV_8UC3,cv::Scalar(150, 150, 150));
-      
+
+
+       Mat contours(H,W,CV_8UC3,cv::Scalar(200, 200, 200));
+  
+//        Mat undistortedconvex(siY,siX,CV_8UC3,cv::Scalar(200, 200, 200));//vis
+       
       //finding all contours on this binary image
       vector<vector<cv::Point> > allContours;
       vector<Vec4i> hierarchy;
 
       cv::findContours( GreenBinary.clone(), allContours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, cv::Point(0, 0) );
-//       drawContours(imgToshow, allContours, -1,  cv::Scalar(200, 0, 50), 1, 8);
-//       vector<vector<cv::Point> > ChosedContours;
+      drawContours(contours, allContours, -1,  cv::Scalar(200, 0, 50), 1, 8);
+      vector<vector<cv::Point> > ChosedContours;
 	    
       //sort the contours into descending order of the area.
       std::sort(allContours.begin(), allContours.end(), bind(&FindField::SortFuncDescending, this, _1, _2));
@@ -107,7 +100,7 @@ bool FindField::FindFieldConvexHull(/* in */  cv::Mat GreenBinary, /* out */Mat 
 			vector<cv::Point> tmpContour = allContours[i];
 			approxPolyDP(tmpContour, tmpContour,
 					cv::arcLength(tmpContour, true) * 0.003, true);
-// 			ChosedContours.push_back(tmpContour);
+			ChosedContours.push_back(tmpContour);
 			for (size_t pIt = 0; pIt < tmpContour.size(); pIt++)
 			{
 				resPoints.push_back(tmpContour[pIt]);
@@ -117,36 +110,60 @@ bool FindField::FindFieldConvexHull(/* in */  cv::Mat GreenBinary, /* out */Mat 
 		}
 		totalResult++;
 	}
-//         drawContours(imgToshow, ChosedContours, -1,  cv::Scalar(0, 200, 50), 2, 8);
+        drawContours(contours, ChosedContours, -1,  cv::Scalar(0, 200, 50), 2, 8);
 	
 // 	convexHull(resPoints,fieldConvexHullPoints, false);
 
         if(ret == false){ return false;}
 	
 	vector<cv::Point> fieldContourUndistort;
+	
 	distortionModel.UndistortP(resPoints, fieldContourUndistort);
       
+	fieldConvexHullPointsUndistort.clear();
 	cv::convexHull(fieldContourUndistort,fieldConvexHullPointsUndistort, false);
+ 
+// 	cv::Rect rec= boundingRect(fieldConvexHullPointsUndistort);
 
+	
+	for (size_t i = 0; i < fieldConvexHullPointsUndistort.size(); i++)
+	{
+	
+	  fieldConvexHullPointsUndistort[i].y = std::min( fieldConvexHullPointsUndistort[i].y + params.field.FieldBorder->get(), siY-1 );
+	}
+	
+	
 
         vector<cv::Point>  hullUndistortMidP;
 	for (size_t i = 0; i < fieldConvexHullPointsUndistort.size(); i++)
 	{
+	  
+	
 		size_t cur = i;
 		size_t next = (i >= fieldConvexHullPointsUndistort.size() - 1) ? 0 : i + 1;
-		LineSegment ls(fieldConvexHullPointsUndistort[cur], fieldConvexHullPointsUndistort[next]);
-		vector<Point2f> resMP = ls.GetMidPoints(4); //16 points
+// 		LineSegment ls(fieldConvexHullPointsUndistort[cur], fieldConvexHullPointsUndistort[next]);
+// 		cv::line( undistortedconvex, fieldConvexHullPointsUndistort[cur], fieldConvexHullPointsUndistort[next],  cv::Scalar(0,200,255), 4, 8 );
+		Line a(0, Vec2i(fieldConvexHullPointsUndistort[cur].x, fieldConvexHullPointsUndistort[cur].y  ),
+		          Vec2i(fieldConvexHullPointsUndistort[next].x, fieldConvexHullPointsUndistort[next].y   )  );
+		vector<cv::Point>  resMP;
+		m_Math::SamplePointsOnLine(a, 50,  resMP);
+		
+// 		vector<Point2f> resMP = ls.GetMidPoints(4); //16 points
 		for (size_t j = 0; j < resMP.size(); j++)
 		{
 			hullUndistortMidP.push_back(cv::Point(resMP[j].x, resMP[j].y));
+// 			if( distortionModel.unDistortionModel.at<uchar>(hullUndistortMidP.back().y ,hullUndistortMidP.back().x)==1 ){
+// 		         cv::circle(undistortedconvex,hullUndistortMidP.back(),10,cv::Scalar(0,255,200),-1);}
+// 		         else { cv::circle(undistortedconvex,hullUndistortMidP.back(),8,cv::Scalar(0,100,200), 2);}
 
 		}
 	}
 	
-	distortionModel.DistortP(hullUndistortMidP, fieldConvexHullPoints);
+	
+	
+      distortionModel.DistortP(hullUndistortMidP, fieldConvexHullPoints);
 
-      
-      
+ 
 
       m_Top = boundingRect(fieldConvexHullPoints).y;
 
@@ -159,17 +176,31 @@ bool FindField::FindFieldConvexHull(/* in */  cv::Mat GreenBinary, /* out */Mat 
 //       CV_FILLED:the contour interiors are drawn
 //       drawContours(fieldConvectHullMat, hulls, -1, cv::Scalar(200, 0, 50),CV_FILLED, 8); // Draw the convexhull of the field
        drawContours(fieldConvectHullMat, hulls, -1, cv::Scalar(255),CV_FILLED, 8); // Draw the convexhull of the field
-//       
-//       cout<<int(fieldConvectHullMat.at<uchar>(0,0) )<<"   "<<int(fieldConvectHullMat.at<uchar>(400,100))<<endl;
-//       cv::imshow("undistImg" ,distImg);
-//       cv::waitKey(1);
+
+       
       
-//      cv::imshow("imgToshow",imgToshow);
+//         cv::imshow("contours",contours);
+// 	imwrite( "/home/yvonne/Desktop/pic/field/contours.jpg", contours );
+// 	cv::waitKey(1);
+	
+// 	cv::imshow("undistortedconvex",undistortedconvex);
+// 	imwrite( "/home/yvonne/Desktop/pic/field/undistortedconvex.jpg", undistortedconvex );
 // 	cv::waitKey(1);
 
      return true;
   
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 void FindField::ColorClassification(const Mat &srcHsvImg, const Mat &tmplateGrayImg,Mat *dstGrayImgs, hsvRangeC *ranges, bool *inTemplate, int size)

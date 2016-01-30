@@ -21,7 +21,7 @@
 	
 	        
         <!-- start bagfile -->
-        <node name="rosbag" pkg="rosbag" type="play" args="--clock -l -r 1.0 /home/yvonne/bags/11.20/17.bag"> 
+        <node name="rosbag" pkg="rosbag" type="play" args="--clock -l -r 0.5 /home/yvonne/bags/11.20/17.bag"> 
          </node>
 	
 	
