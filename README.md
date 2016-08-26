@@ -1,9 +1,9 @@
 # visual_tracking
-1. This system is a ros package. After compiling it in a ros framework, the program can be run by following steps:
-   1) Open one terminal: run a roscore
-   2) Open a new terminal: rosbag play --clock name_of_input_bagfile.bag
-   3) Open another terminal: roslaunch visual_tracking visual_tracking.launch
-   4) Visualiza the output by opening another terminal and run the rqt.
+>1. This system is a ros package. After compiling it in a ros framework, the program can be run by following steps:
+>>1) Open one terminal: run a roscore
+>>2) Open a new terminal: rosbag play --clock name_of_input_bagfile.bag
+>>3) Open another terminal: roslaunch visual_tracking visual_tracking.launch
+>>4) Visualiza the output by opening another terminal and run the rqt.
 
 2. Simple guidline for the code
    1) The function Vision::update() in vision_main.cpp file shows the process flow.
