@@ -1,3 +1,5 @@
+// by Yongfeng
+
 #ifndef KALMANFILTER_H
 #define KALMANFILTER_H
 
@@ -52,6 +54,11 @@ namespace vision
 	
 	void correction(const geometry_msgs::PoseStamped& msg , float conf);
 	void prediction();
+	void prediction2(const gait_msgs::GaitOdomConstPtr & msg);
+	void prediction3();
+	
+	
+	
 	void setCurTime(ros::Time t);
 	void getMeasurementCov(double (&cov)[6]);
 	void robotPoseInit();
@@ -68,14 +75,10 @@ namespace vision
 	geometry_msgs::PoseWithCovarianceStamped estimate_pose_cov;
 	Eigen:: Matrix<float, 6, 1> predict_pose;
 	double speed_x, speed_y, speed_yaw;
-	
 	bool useMotionOdom;
-	
 	geometry_msgs::PoseStamped  robotPoseS;
 	
 	
-	
-
 	//by Hafez
 	ros::NodeHandle nodeHandle;
 	robotcontrol::RobotHeading headingData;
@@ -92,7 +95,14 @@ namespace vision
 	ros::Subscriber odom_sub;
 	Point3d lastOdom;
 	Point3d globalPos;
-	void prediction2(const gait_msgs::GaitOdomConstPtr & msg);
+	
+	uint32_t curOdomID;
+	void getOdom(const gait_msgs::GaitOdomConstPtr & msg);
+	Point3d previousOdom;
+	Point3d currentOdom;
+	
+	
+	
 	cv::Point2f RotateAroundPoint(cv::Point2f pQuery, double alpha);
         void RotateAroundPoint(Point2d pQuery, double alpha, Point2d &res);
         void RotateCoordinateAxis(double alpha, Point2d p, Point2d &res);

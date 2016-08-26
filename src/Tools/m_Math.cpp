@@ -1,5 +1,8 @@
- 
-// #include "m_Math.h"
+
+// Created on: April 12, 2014
+//    
+
+//Authors: Yongfeng
 #include <visual_tracking/Tools/m_Math.h>
 
  using namespace vision;
@@ -27,17 +30,9 @@ Line::Line( int _id,  Vec2i  _s, Vec2i _e, int _nodeId_s, int _nodeId_e): id( _i
 
 
 
-
-
-
-
-
 Vec2i Line::getMidPoint(){
   return Vec2i( (s[0] + e[0])/2 ,(s[1] + e[1])/2 );
 }
-
-
-
 
 
 Line Line::PerpendicularLineSegment( Vec2i mid, float len)

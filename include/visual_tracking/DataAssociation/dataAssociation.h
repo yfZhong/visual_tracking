@@ -1,4 +1,4 @@
-// by Yongfeng
+/******* by Yongfeng  2015.01*******/
 
 #ifndef DATA_ASSOCIATION_H
 #define  DATA_ASSOCIATION_H
@@ -45,7 +45,11 @@ namespace vision
 	public:
 	    DataAssociation();
 	    ~DataAssociation(){};
-
+	    
+	    void AssociateDetectionToModel(FrameGrabber & CamFrm, FindNodes &NodeFinder, float &error);
+	    void AssociateModelToDetection(FrameGrabber & CamFrm, FindNodes &NodeFinder, float &error);
+	    
+	    
 	    
 // 	    void generateModel(geometry_msgs::Pose &p, FrameGrabber & CamFrm);
 	    Vector<pair<Vec2i,Vec2i> > DetectionToModelCorrespondences;
@@ -57,9 +61,9 @@ namespace vision
 	    Vector<Vec2i> ModelToDetectionOutliers;
 	    float MTDInlierPct;
 	    float MTDError;
+	    
 
-	    void AssociateDetectionToModel(FrameGrabber & CamFrm, FindNodes &NodeFinder, float &error);
-	    void AssociateModelToDetection(FrameGrabber & CamFrm, FindNodes &NodeFinder, float &error);
+	    
             float getDTMInlierPct(){
 	      return DTMInlierPct;
 	    }

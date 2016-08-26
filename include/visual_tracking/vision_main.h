@@ -9,6 +9,7 @@
 #include <sensor_msgs/Image.h>
 #include <string>
 #include <sstream>
+#include <fstream> 
 #include <boost/timer/timer.hpp>
 
 #include <tf/message_filter.h>
@@ -51,8 +52,8 @@
 #include "DataAssociation/dataAssociation.h"
 #include "Projection/DistortionModel.h"
 #include "Parameters/Parameters.h"
-#include "ParticleFilter/singleParticle.h"
-#include "ParticleFilter/ParticleFilter.h"
+// #include "ParticleFilter/singleParticle.h"
+// #include "ParticleFilter/ParticleFilter.h"
 #include "Tools/VisionRate.h"
 #include "Tools/tools.h"
 
@@ -125,7 +126,7 @@ namespace vision
 			
 			
 			
-			ParticleFilter particlefilter;
+// 			ParticleFilter particlefilter;
 			LineMatcher lineMatcher;
 			
                         ros::NodeHandle nh;
@@ -135,7 +136,8 @@ namespace vision
 			
 			
 			geometry_msgs::PoseStamped robotPoseS;
-			
+			void readTrajectoryFromFile(string filename, std_msgs::ColorRGBA color , ros::Publisher & pub );
+			void vis_trajectory();
 		private:
                         
 			
@@ -156,22 +158,46 @@ namespace vision
 			ros::Publisher cameraPose_pub_ICP;
 			ros::Publisher robotPose_pub_ICP;
 			ros::Publisher robotPose_pub_KF;
+			ros::Publisher trajectory_pub;
+			
+			
+			ros::Publisher read_trajectory_pub1;
+			ros::Publisher read_trajectory_pub2;
+			ros::Publisher read_trajectory_pub3;
+			ros::Publisher read_trajectory_pub4;
+			ros::Publisher read_trajectory_pub5;
+			ros::Publisher read_trajectory_pub6;
+			ros::Publisher read_trajectory_pub7;
+			ros::Publisher read_trajectory_pub8;
+			
+			
+			geometry_msgs::Point cam_position;
+			geometry_msgs::Point cam_position_avg;
+			visualization_msgs::MarkerArray trajectory; 
+			int id;
 			
 			ros::Publisher associateLines_pub;
 			ros::Publisher particlePoseMarker_pub;
 			ros::Publisher fieldLineMarker_pub;
 			
 			ros::Publisher HypothesisArray_pub;
-			
+			float x_init,y_init,yaw_init;
 			
 			  //Constants
 // 			int H, W, siX, siY;
 			
 			sensor_msgs::Image::ConstPtr img;
 			
-
+                        std::ofstream processingTime; 
+			std::ofstream trajectory_data; 
+			ros::Time startingTime;
+			double previous_time_to_begin;
 			
-			
+// 			geometry_msgs::PoseWithCovarianceStamped camera_pose_cov;
+// 			ros::Publisher camera_pose_cov_pub;
+			ros::Publisher read_trajectory_pub9;
+			void draw_ER_G( string filename1, string filename2 ,int &id);
+			visualization_msgs::MarkerArray ER_G; 
 	};
 
 }//End namespace vision

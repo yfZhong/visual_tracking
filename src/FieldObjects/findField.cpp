@@ -1,3 +1,4 @@
+/******* by Yongfeng  2015.01*******/
 
 // #include "findField.h"
 #include <visual_tracking/FieldObjects/findField.h>
@@ -129,7 +130,9 @@ bool FindField::FindFieldConvexHull(/* in */  cv::Mat &GreenBinary, /* out */Mat
 	for (size_t i = 0; i < fieldConvexHullPointsUndistort.size(); i++)
 	{
 	
-	  fieldConvexHullPointsUndistort[i].y = std::min( fieldConvexHullPointsUndistort[i].y + params.field.FieldBorder->get(), siY-1 );
+// 	  fieldConvexHullPointsUndistort[i].y = std::min( fieldConvexHullPointsUndistort[i].y + params.field.FieldBorder->get(), siY-1 );
+	  fieldConvexHullPointsUndistort[i].y = fieldConvexHullPointsUndistort[i].y ;
+	  
 	}
 	
 	
@@ -146,15 +149,12 @@ bool FindField::FindFieldConvexHull(/* in */  cv::Mat &GreenBinary, /* out */Mat
 		Line a(0, Vec2i(fieldConvexHullPointsUndistort[cur].x, fieldConvexHullPointsUndistort[cur].y  ),
 		          Vec2i(fieldConvexHullPointsUndistort[next].x, fieldConvexHullPointsUndistort[next].y   )  );
 		vector<cv::Point>  resMP;
-		m_Math::SamplePointsOnLine(a, 50,  resMP);
+		m_Math::SamplePointsOnLine(a, 20,  resMP);
 		
 // 		vector<Point2f> resMP = ls.GetMidPoints(4); //16 points
 		for (size_t j = 0; j < resMP.size(); j++)
 		{
 			hullUndistortMidP.push_back(cv::Point(resMP[j].x, resMP[j].y));
-// 			if( distortionModel.unDistortionModel.at<uchar>(hullUndistortMidP.back().y ,hullUndistortMidP.back().x)==1 ){
-// 		         cv::circle(undistortedconvex,hullUndistortMidP.back(),10,cv::Scalar(0,255,200),-1);}
-// 		         else { cv::circle(undistortedconvex,hullUndistortMidP.back(),8,cv::Scalar(0,100,200), 2);}
 
 		}
 	}
@@ -173,19 +173,9 @@ bool FindField::FindFieldConvexHull(/* in */  cv::Mat &GreenBinary, /* out */Mat
       fieldConvectHullMat = Mat::zeros(GreenBinary.size(), CV_8UC1);
       
  
-//       CV_FILLED:the contour interiors are drawn
-//       drawContours(fieldConvectHullMat, hulls, -1, cv::Scalar(200, 0, 50),CV_FILLED, 8); // Draw the convexhull of the field
-       drawContours(fieldConvectHullMat, hulls, -1, cv::Scalar(255),CV_FILLED, 8); // Draw the convexhull of the field
+      drawContours(fieldConvectHullMat, hulls, -1, cv::Scalar(255),CV_FILLED, 8); // Draw the convexhull of the field
 
        
-      
-//         cv::imshow("contours",contours);
-// 	imwrite( "/home/yvonne/Desktop/pic/field/contours.jpg", contours );
-// 	cv::waitKey(1);
-	
-// 	cv::imshow("undistortedconvex",undistortedconvex);
-// 	imwrite( "/home/yvonne/Desktop/pic/field/undistortedconvex.jpg", undistortedconvex );
-// 	cv::waitKey(1);
 
      return true;
   
@@ -285,37 +275,7 @@ int FindField::Bottom(Rect rec) {
 
   return rec.y + rec.height;
 }
-    
-    
-// // ****************************************************************************** //
-//     
-// void FindField:: bresenham(/* int */ int x1, int y1, int x2, int y2, /* out */std::vector< int > & m_FieldBoundary )
-// // ****************************************************************************** //
-//     {
-// 	// * Use Bresenham algorithm to generate straight lines. * //
-// 
-// // 	int slope;
-// 	int dx, dy, x;
-// 	// Reverse lines where x1 > x2
-// 	if ( x1 > x2 ) {
-// 	    bresenham( x2, y2, x1, y1,  m_FieldBoundary);
-// 	    return;
-// 	}
-// 	dx = x2 - x1;
-// 	dy = y2 - y1;
-// 	
-// 	// Blit
-// 	for ( x = x1; x <= x2; x++ ) {
-//             
-// 	    m_FieldBoundary[ x ] = y1 + (x- x1)* double(dy)/double(dx);
-// //            cout<<x<<"  "<<  m_FieldBoundary[ x ] <<endl;
-// 	}
-// 	
-// 	return;
-// 
-//     }; // END of bresenham
-//     
-//     
+     
  
  
       

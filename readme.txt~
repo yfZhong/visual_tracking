@@ -19,38 +19,3 @@
     Package Projection: do the projection of the 3D model to the image plane.
     Package Tools: m_Math.cpp
                    tools.cpp
-
-
-
-
-Main parameters:
-
-Field color range:
-             Vision/fieldhsv
-
-Obstalce color range:
-             Vision/obstalcehsv
-
-Detecting lines: 
-             Vision/line/MinSkeletonValue: threshold for skeleton pixels
-             Vision/line/Div1
-             Vision/line/Div2  :divide images, different parts for different sizes of kernels 
-
-Construncting nodegraph: 
-             Vision/graphNode/_Min_adg:    Minimal weighs of connecting two nodes
-             Vision/graphNode/_MinAngleForSameComp: should be close to Pi
-             Vision/graphNode/_MaxAvgProjectedDist: the max average projected distance for connect two clusters
-             Vision/graphNode/_MinCmpLineLength: The cluster smaller than this threshold would be rejected
-Hillclimbing: 
-             Vision/hillclimbing/MovingStepCoefficient
-             Vision/hillclimbing/MaxIterationNum
-debug: 
-
-              Vision/debug/useKalmanFielter:
-              Vision/debug/useSolvePnP   : otherwise use hillcilmbing
-              Vision/debug/useRansac     : use EPnP + Ransac; otherwise use EPnP only
-              Vision/debug/useMothioOdom: use moving speed from dead reckoning, otherwise use vision odom
- 
-       
-
-

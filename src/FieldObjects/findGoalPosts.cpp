@@ -1,4 +1,4 @@
-
+/******* by Yongfeng  2015.01*******/
 
 // #include "findGoalPosts.h"
 #include <visual_tracking/FieldObjects/findGoalPosts.h>
@@ -67,29 +67,11 @@ void FindGoalPosts::findGoalPosts(Mat rawHSV, Mat B_Channel, Mat goalBinaryImg, 
 
 			cv::Point down =(tmpLine.s[1] < tmpLine.e[1]) ?cv::Point( tmpLine.e[0],tmpLine.e[1] ) : cv::Point( tmpLine.s[0],tmpLine.s[1] );
 			double jumpDouble = params.goal.jumpMax->get(); //pixel
-// 				cv::Point2f downReal;
-// 				if (!distortionModel.GetOnRealCordinate(down, downReal))
-// 				{
-// 					ROS_ERROR("Erorr in programming!");
-// 					return false;
-// 				}
+
 			double downDistance2Field = pointPolygonTest(fieldHull, down, true);
 			if (downDistance2Field > MaxOutField || downDistance2Field< 0) //down point should be near inside
 				continue;
-// 				double distance = GetDistance(downReal);
-// 				if (distance < 2)
-// 				{
-// 					jumpDouble = 40;
-// 				}
-// 				else if (distance >= 2 && distance < 3)
-// 				{
-// 					jumpDouble = 23;
-// 				}
-// 				else
-// 				{
-// 					jumpDouble = 15;
-// 				}
-//                                jumpDouble = 25;
+
 			for (size_t j = 0; j < midds.size(); j++)
 			{
 
@@ -121,16 +103,7 @@ void FindGoalPosts::findGoalPosts(Mat rawHSV, Mat B_Channel, Mat goalBinaryImg, 
 				{
 					safeToShow++;
 				}
-// 
-// 					if (safeToShow >= 2) //Both ends are in the picture rectangle
-// 					{
-// 						if (SHOWGUI && params.debug.showGoalD->get())
-// 						{
-// 
-// 							cv::line(guiImg, tocheck.P1, tocheck.P2,
-// 									yellowColor(), 1);
-// 						}
-// 					}
+
 
 				for (int k = 0; k < itLeft.count;
 						k++, ++itLeft, ++itHSVLeft)
@@ -154,19 +127,6 @@ void FindGoalPosts::findGoalPosts(Mat rawHSV, Mat B_Channel, Mat goalBinaryImg, 
 						break;
 					}
 
-// 					if (hsvC[0] >= params.goalhsv.h0->get()
-// 							&& hsvC[0] <= params.goalhsv.h1->get()
-// 							&& hsvC[1] >= params.goalhsv.s0->get()
-// 							&& hsvC[1] <= params.goalhsv.s1->get()
-// 							&& hsvC[2] >= params.goalhsv.v0->get()
-// 							&& hsvC[2] <= params.goalhsv.v1->get())
-// 					{
-// 						//color is ok
-// 					}
-// 					else
-// 					{
-// 						break;
-// 					}
 
 
 					if (BinaryC >0)
@@ -379,75 +339,6 @@ void FindGoalPosts::findGoalPosts(Mat rawHSV, Mat B_Channel, Mat goalBinaryImg, 
 // 		goalPosition.push_back(downReal);
 		finalPosts.push_back(Line(0,Vec2i(down.x, down.y), Vec2i(up.x, up.y)));
 
-
-		
-		
-		
-		
-			  			  
-// 		if((down.y-up.y)!=0){
-// 		  
-// 		    cv::LineIterator ittmpLine(rawHSV, down, up, 8);
-// 		    int count1 =0; int count2=0;
-// 		    for (int k = 0; k < ittmpLine.count; k++, ++ittmpLine)
-// 		    {
-// 			  count1++;
-// 			  uchar BinaryC =  *(*ittmpLine);
-// 			    if (BinaryC>0)
-// 			    {
-// 				    count2++;
-// 			    }
-// 
-// 		    }
-// 		    //get enouth pct of white color
-// 		    if (float(count2)/float(count1) *100 > params.goal.minContinuesColor->get()){ 
-// // 				  if (1){ 
-// 			while(true)
-// 		      {
-// // 				uchar goalB = goalBinaryImg.at(down);
-// 			      if (goalBinaryImg.data[down.y*W + down.x] >0)
-// 			      {
-// 				      if(down.y + 1 < H){ down = cv::Point( down.x, down.y + 1);}
-// 				      else{break;}
-// 			      }
-// 			      else
-// 			      {
-// 				      break;
-// 			      }
-// 		      }
-// 		      
-// 
-// 		      while(true)
-// 		      {
-// 
-// // 				uchar goalBUp = goalBinaryImg.at(up);
-// 			      if (goalBinaryImg.data[up.y*W + up.x  ] >0)
-// 			      {
-// 				      if(down.y -1  > 0){ up = cv::Point( up.x, up.y - 1);}
-// 				      else{break;}
-// 			      }
-// 			      else
-// 			      {
-// 				      break;
-// 			      }
-// 		      }
-// 		    
-// 		    
-// 		    double downDistance2Field = pointPolygonTest(fieldHull, down,true);
-// 		    if (downDistance2Field < MaxOutField) //down point should be near inside
-// 			continue;
-// 		    
-// 		    finalPosts.push_back(Line(0,Vec2i(down.x, down.y), Vec2i(up.x, up.y)));
-// 		    
-// 		    
-// 		    
-// 		    } 
-// 		      
-// 		      
-// 		}
-		      
-		
-
 		
 	}
   
@@ -516,21 +407,6 @@ void FindGoalPosts::findGoalPosts(Mat rawHSV, Mat B_Channel, Mat goalBinaryImg, 
     imshow("finalPosts", finalPostsImg );
     waitKey(1);
     
-
-/*    
-    imshow("binaryEdge2", binaryEdge2 );
-    waitKey(1);
-    */
-    
-    
-    
-    
-//     imshow("goalBinaryImgErode", goalBinaryImgErode );
-//     waitKey(1);
-//     
-//         
-//     imshow("goalBinaryImgDilate", goalBinaryImgDilate );
-//     waitKey(1);
   
 }
 

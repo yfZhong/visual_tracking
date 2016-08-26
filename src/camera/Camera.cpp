@@ -1,7 +1,8 @@
-//Camera.cpp
-// Created on: Apr 19, 2015
-//     Author: Hafez Farazi <farazi@ais.uni-bonn.de>
-// #include "Camera.h"
+//DistotionModel.cpp
+// Created on: April 12, 2014
+//    
+
+//Authors: Yongfeng
 #include <visual_tracking/camera/Camera.h>
 
 bool Camera::InitCameraDevice(bool firstTime)

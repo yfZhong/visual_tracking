@@ -1,3 +1,9 @@
+/*
+
+Authors: Yongfeng
+
+*/
+
 #ifndef FINDNODES_H
 #define FINDNODES_H
 
@@ -158,30 +164,19 @@ namespace vision
 	    void findNodes( /* in_out */ Rectangle_Buffer &_Rectangles /* OUT Node_Buffer * m_NodeBuffer, */ );
 	    void FindCloseNodes2 ( /* in */ const float ( & weightedWhiteValues )[ H ][ W ] /* IN_OUT Node_Buffer * m_NodeBuffer, */ );
 	    void ConnectCloseNodes2 ( /* in */ const float ( & weightedWhiteValues )[ H ][ W ]/* IN const Trans_Buffer * m_TransBuffer, */ /* IN_OUT Node_Buffer * m_NodeBuffer, */ );
-	    void DeleteNodes2 ( /* IN const Trans_Buffer * m_TransBuffer, */ /* IN_OUT Node_Buffer * m_NodeBuffer*/);
+	    void SmoothNodes2 ( /* IN_OUT Node_Buffer * m_NodeBuffer, */ );
 	    void findReachableNodes2(Node_Buffer * nodeBuffer);
+	    
 	    void connectComps();
+	    void connectSingleNodes();
 	    void updateUndistoredLines();
 	    void updateNodeAngle();
 	    void updateNodeTangentLine();
-	    void updateCompPoints();
+	    void updateNodeWeights();
 	    void MergeMoreComps();
 	    void removeSmallComp ();
-	      
-	    void findNodes( /* in_out */ int **matrix/* OUT Node_Buffer * m_NodeBuffer, */ );
-	    void ConnectTouchingNodes ( /* in */   int **matrix /* IN_OUT Node_Buffer * m_NodeBuffer, */ );
-	    void FindMoreNodes ( /* in */  int **matrix /* IN_OUT Node_Buffer * m_NodeBuffer, */ );
-	    void FindCloseNodes ( /* in */ const float ( & weightedWhiteValues )[ H ][ W ]/* IN const Trans_Buffer * m_TransBuffer, */ /* IN_OUT Node_Buffer * m_NodeBuffer, */ );
-	    void ConnectCloseNodes ( /* in */ const float ( & weightedWhiteValues )[ H ][ W ]/* IN const Trans_Buffer * m_TransBuffer, */ /* IN_OUT Node_Buffer * m_NodeBuffer, */ );
-	    void SmoothNodes ( /* IN_OUT Node_Buffer * m_NodeBuffer, */ );
-	    void DeleteNodes ( /* IN const Trans_Buffer * m_TransBuffer, */ /* IN_OUT Node_Buffer * m_NodeBuffer*/);
-	    void  InsertCrossPoints( /* IN_OUT Node_Buffer * m_NodeBuffer, */ );
-	    void SmoothNodes2 ( /* IN_OUT Node_Buffer * m_NodeBuffer, */ );
-	    void findReachableNodes0(int startNode, std::vector<int>& reachable, int only_direction=-1, bool remove_first=false);
-	    void findReachableNodes1(int startNode, LinearGraphComponent & lComp, int only_direction=-1);
-	    void connectMoreNodes();
-	    void mainLoop(FrameGrabber & CamFrm);
-	  
+	    void updateCompPoints();
+
 	
 	
 	private:

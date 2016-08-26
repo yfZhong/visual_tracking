@@ -27,7 +27,8 @@ FIND_LIBRARY(GSLCBLAS_LIBRARY
 	DOC "GSL cblas library"
 )
 
-
+# SET(CMAKE_C_FLAGS "-std=gnu99 -std=c++11 -Wall -Wno-unused-parameter -Wno-unused-function -pthread -I. -Icommon -O1 -lstdc++")
+# SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11")
 find_package(Boost REQUIRED COMPONENTS system chrono timer)
 
 
@@ -78,9 +79,9 @@ add_library(visual_tracking
 	src/Projection/DistortionModel.cpp
 
         
-        src/ParticleFilter/singleParticle.cpp
-        src/ParticleFilter/ParticleFilter.cpp
-        src/ParticleFilter/PclClustering.cpp
+#         src/ParticleFilter/singleParticle.cpp
+#         src/ParticleFilter/ParticleFilter.cpp
+#         src/ParticleFilter/PclClustering.cpp
         
         src/Tools/VisionRate.cpp
         src/Tools/tools.cpp

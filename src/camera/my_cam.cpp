@@ -1,4 +1,5 @@
-
+//Created on: April 12, 2014
+//Authors: Yongfeng
 #include <iostream>
 #include <ros/ros.h>
 #include <visual_tracking/Parameters/Parameters.h>

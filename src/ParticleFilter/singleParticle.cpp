@@ -25,23 +25,19 @@ void SingleParticle::cameraPoseInit(){
 // void SingleParticle::run(vector<vector<int> > &detectedPoints, geometry_msgs::Pose &p, Model& model){
  void SingleParticle::run(std::vector<cv::Point> &undistDetectedPoints, geometry_msgs::Pose &p, Model& model){
 	    // ******************************************* //
-	    // * 4. Calculate the projected model points * //model points are stored in forw_Proj.points_in_image_disto
+	    // * 1. Calculate the projected model points * //model points are stored in forw_Proj.points_in_image_disto
 	    // ******************************************* //
 	      model.forw_Proj.setRobotPose(p);
 	      model.forw_Proj.mainLoop();
 
 // 	    // ******************************* //
-// 	    // * 5. ICP for data association * // 	 return pointMatcher.correspondences
+// 	    // * 2. ICP for data association * // 	 return pointMatcher.correspondences
 // 	    // ******************************* //
 	      model.pointMatcher.matcher(undistDetectedPoints, model.forw_Proj.ModelPointsInImg);
 	      
-	      
-	      
-// 	      
-// 	      
-// 	      
+// 	  	      
 // 	    // ***************************************************************** //
-// 	    // * 6. storing the correspondences and calculating the camera pose* //
+// 	    // * 3. storing the correspondences and calculating the camera pose* //
 // 	    // ***************************************************************** //
 
 
@@ -75,17 +71,6 @@ geometry_msgs::PoseStamped SingleParticle::getCameraPose(){
 
 }
 
-// vector<int> SingleParticle::getCorrespondences(){
-//   
-//   return model.pointMatcher.correspondences;
-//   
-// }
-// 
-// std::vector<cv::Point>  SingleParticle::getUndistPoints(){
-//   
-//   return undistPoints;
-//   
-// }
 // 
 std::vector<cv::Point2f> SingleParticle::getImgPts(){
   return imgPts;
@@ -96,16 +81,6 @@ std::vector<cv::Point3f> SingleParticle::getWorldPts(){
   return worldPts;
   
 }
-// 
-// vector<vector<int> > SingleParticle::getProjectedPointsInImgDistored(){
-//   
-//   return forw_Proj.points_in_image_disto;
-//   
-// }
-// 
-// int SingleParticle::getInlierNum(){
-//   
-//   return pointMatcher.inlierNum;
-// }
+
 	
 	

@@ -1,3 +1,9 @@
+/*
+
+Authors: Yongfeng
+
+*/
+
 // #include "BackwardProjection.h"
 
 #include <visual_tracking/Projection/BackwardProjection.h>

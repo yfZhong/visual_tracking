@@ -5,18 +5,34 @@
 
 
 
-<node name="bgr2yuyv" pkg="vision_6d_pose" type="bgr2yuyv"  output="screen"> 
-  </node>
+<!--node name="bgr2yuyv" pkg="vision_6d_pose" type="bgr2yuyv"  output="screen"> 
+  </node-->
 
 
 <!--record bagfiles-->
-<node pkg="rosbag" type="record" name="recordBag" output="screen" args="record /vision/yuyvImg /tf -O /home/yvonne/bags/yuyvImage_robotcupfield.bag"/>
+<node pkg="rosbag" type="record" name="recordBag" output="screen" args="record 
+    /diagnostics
+    /gait/odometry
+    /joint_commands
+    /joint_states
+    /joy
+    /led_state
+    /motion_player/state
+    /plot
+    /robotcontrol/cap_gait/robot_model
+    /robotcontrol/diagnostics
+    /robotcontrol/fade_torque/status
+    /robotcontrol/headcontrol/status
+    /robotcontrol/state
+    /robotcontrol/vis_marker_array
+    /robotmodel/robot_heading
+    /robotmodel/robot_state
+    /rosout
+    /rosout_agg
+    /tf
+    /vision/takenImg
 
-
-<!--node name="image_view3" pkg="image_view" type="image_view" respawn="false" output="screen">
-    <remap from="image" to="/vision/takenImg"/>
-    <param name="autosize" value="true" />
-  </node-->
+    -O /home/yvonne/master_thesis/bags/easy_test/1.3_2.bag"/>
 
 
 </launch>

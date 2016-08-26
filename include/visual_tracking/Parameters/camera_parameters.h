@@ -1,5 +1,9 @@
 // Soccer Vision Gui
-// Author: Julio Pastrana <pastrana@ais.uni-bonn.de>
+/*
+
+Authors: Yongfeng
+
+*/
 
 // camera_parameters.h
 // Provides the constants required to distort and undistort points in the camera.

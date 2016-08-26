@@ -1,7 +1,174 @@
 
+// Created on: April 12, 2014
+//    
+
+//Authors: Yongfeng
 #include <visual_tracking/Tools/tools.h>
 
-// #include <visual_tracking/Parameters/Parameters.h"
+// #include <visual_tracking/Parameters/Parameters.h"7
+#include <visual_tracking/Tools/m_Math.h>
+
+ 
+ 
+  void vision::Tools::generateKernelImg(const char* kernelname){
+    
+	std::string absName = ros::package::getPath("") + "/tmp_file/" + kernelname +".jpg";
+	int DOG_kernel_9[7] = {-1,-3,3,4,3,-3,-1};
+	int gaussian[7] = {1,2,5,8,5,2,1};
+        
+	int size= 100;
+	int size2= 140;
+        cv::Mat kernelv = cv::Mat::zeros(size,size, CV_8UC1);
+	cv::Mat kernelh = cv::Mat::zeros(size,size, CV_8UC1);
+        cv::Mat kerneld45 = cv::Mat::zeros(size2,size2, CV_8UC1);
+	cv::Mat kerneld135 = cv::Mat::zeros(size2,size2, CV_8UC1);
+	
+//         int kernelv [size ][ size ]; 
+// 	int kernelh [size ][ size ]; 
+	int l = (size)/2/7;// l=14
+	
+	Line h(0, Vec2i(0, size/2 ),Vec2i(size-1, size/2) );
+	Line v(0, Vec2i(size/2 , 0),Vec2i(size/2, size-1) );
+	Line d45(0, Vec2i(0, 0),Vec2i(size2-1, size2-1) );
+	Line d135(0, Vec2i(size2-1 , 0),Vec2i(0, size2-1) );
+	
+	
+	int maxv = 32;
+	int minv = -30;
+	for ( int x = 0; x < size/2; x++ ) { // [0]
+                for ( int y = 0; y < size/2; y++ ) {// [1]
+		  
+		  Vec2i p(x, y);
+		  int dist  = m_Math::Point2LineSegDistance(p, h);
+		  int dist2 = m_Math::Point2LineSegDistance(p, v);
+		  int k,k2;
+		 
+		  if(dist < l ){k=0;}
+		  else if(dist < 3*l ){k=1;}
+	          else if(dist < 5*l ){k=2;}
+	          else {k=3;}
+                 
+                  if(dist2 < l ){k2=0;}
+		  else if(dist2 < 3*l ){k2=1;}
+	          else if(dist2 < 5*l ){k2=2;}
+	          else {k2=3;}
+		  
+		  
+		  int value =  gaussian[3 - k2] * DOG_kernel_9[ 3 - k];
+		  kernelh.data[ y*size + x]  = float((value-minv))/float((maxv-minv)) *255; 
+		  kernelh.data[ y*size + (size-1-x)] =   kernelh.data[ y*size + x] ; 
+		  kernelh.data[ (size-1 -y)*size + (size-1-x)]=   kernelh.data[ y*size + x] ; 
+		  kernelh.data[ (size-1 -y)*size + x]  =  kernelh.data[ y*size + x];
+		  
+		  
+		  value =  gaussian[3 - k] * DOG_kernel_9[ 3 - k2];
+		  kernelv.data[ y*size + x]  = float((value-minv))/float((maxv-minv)) *255; 
+		  kernelv.data[ y*size + (size-1-x)] =   kernelv.data[ y*size + x] ; 
+		  kernelv.data[ (size-1 -y)*size + (size-1-x)]=   kernelv.data[ y*size + x] ; 
+		  kernelv.data[ (size-1 -y)*size + x]  =  kernelv.data[ y*size + x];
+		  
+		 	  
+		  
+		  
+		}
+		
+	 }
+	 
+	 
+	 
+	 for ( int x = 0; x < size2/2; x++ ) { // [0]
+                for ( int y =x; y < size2-x; y++ ) {// [1]
+	 
+	 
+	 	  Vec2i p(x, y);
+		  int dist3  = m_Math::Point2LineSegDistance(p, d45);
+		  int dist4 = m_Math::Point2LineSegDistance(p, d135);
+		  int k3,k4;
+		 
+		  if(dist3 < l ){k3=0;}
+		  else if(dist3 < 3*l ){k3=1;}
+	          else if(dist3 < 5*l ){k3=2;}
+	          else if(dist3< 7*l ){k3=3;}
+	          else{  
+// 		        k3=3;
+		        continue;
+		  }
+                 
+                  if(dist4 < l ){k4=0;}
+		  else if(dist4 < 3*l ){k4=1;}
+	          else if(dist4 < 5*l ){k4=2;}
+	          else if(dist4 < 7*l ){k4=3;}
+		  else{ 
+// 		     k4=3;
+		     continue;
+		  }
+		  
+		  int value =  gaussian[3 - k4] * DOG_kernel_9[ 3 - k3];
+		  
+// 		  kerneld45.data[ y*size + x]  = float((value-minv))/float((maxv-minv)) *255; 
+// 		  kerneld45.data[ x*size + y] =   kerneld45.data[ (size-1-x)*size + (size-1-y)] 
+// 		  =  kerneld45.data[ (size-1-y)*size + (size-1-x)]  =  kerneld45.data[ y*size + x] ;
+// 		  
+// 		  
+// 		  value =  gaussian[3 - k3] * DOG_kernel_9[ 3 - k4];
+// 		  kerneld135.data[ y*size + x]  = float((value-minv))/float((maxv-minv)) *255; 
+// 		  kerneld135.data[ x*size + y] =   kerneld135.data[ (size-1-x)*size + (size-1-y)] 
+// 		  =  kerneld135.data[ (size-1-y)*size + (size-1-x)]  =  kerneld135.data[ y*size + x] ;
+		  
+		  kerneld45.data[ y*size2 + x]  = float((value-minv))/float((maxv-minv)) *255; 
+		  kerneld45.data[ x*size2 + y] =   kerneld45.data[ (size2-1-x)*size2 + (size2-1-y)] 
+		  =  kerneld45.data[ (size2-1-y)*size2 + (size2-1-x)]  =  kerneld45.data[ y*size2 + x] ;
+		  
+		  
+		  value =  gaussian[3 - k3] * DOG_kernel_9[ 3 - k4];
+		  kerneld135.data[ y*size2 + x]  = float((value-minv))/float((maxv-minv)) *255; 
+		  kerneld135.data[ x*size2 + y] =   kerneld135.data[ (size2-1-x)*size2 + (size2-1-y)] 
+		  =  kerneld135.data[ (size2-1-y)*size2 + (size2-1-x)]  =  kerneld135.data[ y*size2 + x] ;
+		  
+		  
+		}
+		
+	 }
+	 
+
+
+	
+		
+	cv::imshow("kerneld45",kerneld45);
+	imwrite( "/home/yvonne/Desktop/pic/line/kerneld45.jpg", kerneld45 );
+	cv::waitKey(1);
+	
+	cv::imshow("kerneld135",kerneld135);
+	imwrite( "/home/yvonne/Desktop/pic/line/kerneld135.jpg",kerneld135 );
+	cv::waitKey(1);
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	
+		
+	cv::imshow("kernelh",kernelh);
+	imwrite( "/home/yvonne/Desktop/pic/line/kernelh.jpg", kernelh );
+	cv::waitKey(1);
+	
+	cv::imshow("kernelv",kernelv);
+	imwrite( "/home/yvonne/Desktop/pic/line/kernelv.jpg", kernelv);
+	cv::waitKey(1);
+	
+	
+	
+	
+    
+    
+  }
+ 
+
 
 	    void vision::Tools::generateKernelImg2(const char* kernelname){
 		    int gaussian_kernel_vis[19] = {1,18,153,816,3060,8568,18564,31824,43758,48620,43758,31824,18564,8568,3060,816,153,18,1}; 

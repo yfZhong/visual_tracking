@@ -52,44 +52,8 @@ namespace vision
 	   HillClimbing();
 	   ~HillClimbing();
 	   
-	  void MovingStepInit();
-	   
-	  void robotPoseUpdate(geometry_msgs::Pose &p,FrameGrabber & CamFrm, PointMatcher &pointMatcher,FindNodes &NodeFinder, double &error);
-	  
-	  void getNeighbors(geometry_msgs::Pose p,int idx,  vector< geometry_msgs::Pose >& poseArray);
-	  
-	  void calculateError(geometry_msgs::Pose &p,FrameGrabber & CamFrm, double(&error)[2] , PointMatcher &pointMatcher,FindNodes &NodeFinderC);
-	  
-	  void mainLoop(geometry_msgs::Pose &p,FrameGrabber & CamFrm, PointMatcher &pointMatcher,FindNodes &NodeFinder);
-	  
-	  void calculateCov(geometry_msgs::Pose &p, FrameGrabber & CamFrm, PointMatcher &pointMatcher,FindNodes &NodeFinder);
-	  
-	  void calculateErrorForCov(geometry_msgs::Pose &p,FrameGrabber & CamFrm, double &error, double& K, PointMatcher &pointMatcher,FindNodes &NodeFinder);
-	  
-	  
-	  
-	  
-	  
+
 	  DataAssociation AssociateData;
-	  float calculateError(geometry_msgs::Pose &p,FrameGrabber & CamFrm,FindNodes &NodeFinder);
-	  float calculateAvgError(geometry_msgs::Pose &p,FrameGrabber & CamFrm,FindNodes &NodeFinder);
-	  float calculateErrorForCov(geometry_msgs::Pose &p,FrameGrabber & CamFrm, FindNodes &NodeFinder, float &K );// K ----num of correspondence
-	  void calculateCov(geometry_msgs::Pose &pose, FrameGrabber & CamFrm, FindNodes &NodeFinder);
-	  void robotPoseUpdate(geometry_msgs::Pose &p,FrameGrabber & CamFrm,FindNodes &NodeFinder, float &error);
-	  float getConfidence(geometry_msgs::Pose &p,FrameGrabber & CamFrm,FindNodes &NodeFinder);
-	  
-	   float doModelMatching(geometry_msgs::Pose &p,FrameGrabber & CamFrm,FindNodes &NodeFinder);
-	   bool Least_Square( DataAssociation &AssociateData,FrameGrabber & CamFrm ,FindNodes &NodeFinder,geometry_msgs::Pose &p);
-	   void Least_Square2(geometry_msgs::Pose &pose,FrameGrabber & CamFrm ,FindNodes &NodeFinder);
-	   void IterativeLeastSquare(geometry_msgs::Pose &pose,FrameGrabber & CamFrm ,FindNodes &NodeFinder);
-	   bool hypothesisEvalueate2(float conf, FrameGrabber & CamFrm,FindNodes &NodeFinder);
-	   double fx , fy, cx, cy; 
-	   int siX, siY, H, W;
-	   PoseCalculator Least_Square_poseUpdate;
-	  
-	  
-	  void mainLoop(geometry_msgs::Pose &pose,FrameGrabber & CamFrm ,FindNodes &NodeFinder);
-	  
 	  geometry_msgs::Pose currentPose;
 	  float currentError;
 	  float currentAvgError;
@@ -102,27 +66,55 @@ namespace vision
 	  void getFieldInfo( FieldInfo &_fieldInfo );
 	  geometry_msgs::PoseArray hypothesisArray;
 	  vector<float> hypothesisWeights;
-	  geometry_msgs::Pose SamplingPoseAround(geometry_msgs::Pose center, float conf);
+	  	   
+	  double fx , fy, cx, cy; 
+	  int siX, siY, H, W;
+	  
+	  PoseCalculator EPnP_poseUpdate;
+	  
+	  
+	  
+	  
+	  
+	  //hill climbing method
+	  void hillClimbingLoop(geometry_msgs::Pose &pose,FrameGrabber & CamFrm ,FindNodes &NodeFinder);
+	  void robotPoseUpdate(geometry_msgs::Pose &p,FrameGrabber & CamFrm,FindNodes &NodeFinder, float &error);
 	  bool hypothesisEvalueate(float conf, FrameGrabber & CamFrm,FindNodes &NodeFinder);
+	  
+	  
+	  
+	  
+	  
+	  //EPnP method
+	  void EPnPLoop(geometry_msgs::Pose &pose,FrameGrabber & CamFrm ,FindNodes &NodeFinder);
+	  bool EPnP( DataAssociation &AssociateData,FrameGrabber & CamFrm ,FindNodes &NodeFinder,geometry_msgs::Pose &p);
+	  bool hypothesisEvalueate2(float conf, FrameGrabber & CamFrm,FindNodes &NodeFinder);
+	   
+	  //covariance for KF
+	  void calculateCov(geometry_msgs::Pose &pose, FrameGrabber & CamFrm, FindNodes &NodeFinder);
+	   
+
+	  
+	  float doModelMatching(geometry_msgs::Pose &p,FrameGrabber & CamFrm,FindNodes &NodeFinder);
 	  void correctHeading( geometry_msgs::Pose &pose );
-	   float getDistance( geometry_msgs::Pose &pose1, geometry_msgs::Pose &pose2 );
-	   float getYawDiff( geometry_msgs::Pose &pose1, geometry_msgs::Pose &pose2 );
-	  
-	//by Hafez
-	ros::NodeHandle nodeHandle;
-	robotcontrol::RobotHeading headingData;
-	ros::Subscriber heading_sub_robotstate;
-	void handleHeadingData( const robotcontrol::RobotHeadingConstPtr& msg) //in radian
-	{
-		headingData=*msg;
-	}
-	double headingOffset;
-	double getHeading();
-	 
-	  
-	  
-// 	  m_Math::RadianAngleDiff(yaw, getHeading()) 
-// 	  RadianAngleDiff(double yaw1, double yaw2)
+	  float getDistance( geometry_msgs::Pose &pose1, geometry_msgs::Pose &pose2 );
+	  float getYawDiff( geometry_msgs::Pose &pose1, geometry_msgs::Pose &pose2 );
+	  void MovingStepInit();
+	  void getNeighbors(geometry_msgs::Pose p,int idx,  vector< geometry_msgs::Pose >& poseArray);
+	  geometry_msgs::Pose SamplingPoseAround(geometry_msgs::Pose center, float conf);
+	   
+	   
+	    
+	  //by Hafez
+	  ros::NodeHandle nodeHandle;
+	  robotcontrol::RobotHeading headingData;
+	  ros::Subscriber heading_sub_robotstate;
+	  void handleHeadingData( const robotcontrol::RobotHeadingConstPtr& msg) //in radian
+	  {
+		  headingData=*msg;
+	  }
+	  double headingOffset;
+	  double getHeading();
 	 
 	  
 	  double moving_step[6];
@@ -146,6 +138,10 @@ namespace vision
 	  
 	  
 	  int count;
+	  float confidence;
+	  
+	  
+	  float robot_rot_height;
 	  
 	  
 	  

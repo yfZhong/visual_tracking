@@ -13,6 +13,8 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
+
+/******* by Yongfeng  2015.02*******/
 #include <opencv2/core/eigen.hpp>
 
 

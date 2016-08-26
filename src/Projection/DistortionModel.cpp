@@ -1,6 +1,10 @@
-//DistotionModel.cpp
+
 // Created on: May 12, 2015
-//     Author: Hafez Farazi <farazi@ais.uni-bonn.de>
+//    
+
+//Authors: Yongfeng
+
+
 // #include "DistortionModel.h"
 
 #include <visual_tracking/Projection/DistortionModel.h>
@@ -495,17 +499,26 @@ void DistortionModel::CreateUndistort(const Mat &rawImg, Mat &res)
 
 bool DistortionModel::Init()
 {       
-
+        
 	try
 	{
+	        ROS_INFO("cCfile path = %s",params.calib.filePath->get().c_str());
 		cv::FileStorage fs(params.calib.filePath->get(), FileStorage::READ);
-		fs["cameraMatrix"] >> cameraMatrix;
-		fs["distCoeffs"] >> distCoeffs;
+// 		cv::FileStorage fs("/home/yvonne/NimbRo-OP/src/nimbro/launch/config/vision/cCFile.yml", FileStorage::READ);
+		
+ 		fs["cameraMatrix"] >> cameraMatrix;
+ 		fs["distCoeffs"] >> distCoeffs;
+// 		cout<<cameraMatrix<<endl;
+		
+
 	} catch (cv::Exception& e)
 	{      
 		ROS_ERROR("exception caught: %s", e.what());
 		return false;
 	}
+	
+	
+	
 	//Because the original camera matrix was created with 640*480
 	{
 		cameraMatrix.at<double>(Point(0,0))*=params.camera.width->get();

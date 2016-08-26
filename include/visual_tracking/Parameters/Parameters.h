@@ -5,7 +5,8 @@
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
-
+#include <ros/ros.h>
+#include <ros/package.h>
 #include <config_server/parameter.h>
 #include <string.h>
 #include <opencv2/opencv.hpp>
@@ -72,7 +73,6 @@ public:
 	config_server::Parameter<float> *MinProjectedDistance;
 	
 	config_server::Parameter<int> *MinLineLength;
-	
 	
 
 };
@@ -201,6 +201,12 @@ public:
 	config_server::Parameter<bool> *useMotionOdom;
 	config_server::Parameter<bool> *useSolvePnP;
 	config_server::Parameter<bool> *useRansac;
+	config_server::Parameter<bool> *saveProcessingTime;
+	config_server::Parameter<bool> *showTrajectory;
+	config_server::Parameter<bool> *saveTrajectory;
+	config_server::Parameter<bool> *visTrajectoryData;
+	config_server::Parameter<bool> *useKFCovType0;
+	config_server::Parameter<bool> *useYawSpeed;
 };
 
 // class CameraCalibratorC
@@ -310,6 +316,9 @@ public:
 	config_server::Parameter<int> *ErrorThreshod;
 	config_server::Parameter<int> *KFPositionCov;
 	config_server::Parameter<int> *KFOrientationCov;
+	config_server::Parameter<float> *KFSpeedX;
+	config_server::Parameter<float> *KFSpeedY;
+	config_server::Parameter<float> *KFSpeedYaw;
 };
 
 
@@ -425,16 +434,14 @@ public:
 		line.MinLineSegDistance = new config_server::Parameter<float>("/vision/line/MinLineSegDistance", 0, 0.05, 5, 1.0);
 		line.MinProjectedDistance = new config_server::Parameter<float>("/vision/line/MinProjectedDistance", 0, 0.05, 5, 0.25);
 		
-                line.MinLineLength = new config_server::Parameter<int>("/vision/line/MinLineLength", 0, 10, 1000, 100);
+                line.MinLineLength = new config_server::Parameter<int>("/vision/line/MinLineLength", 0, 10, 1000, 99);
 		
 		
 		square.MaxNeighborDist = new config_server::Parameter<int>("/vision/square/MaxNeighborDist", 2, 1, 10, 5);
-		square.Max_K = new config_server::Parameter<int>("/vision/square/Max_K", 2, 1, 10, 6);
-		square.Max_K_border = new config_server::Parameter<int>("/vision/square/Max_K_border", 2, 1, 10, 5);
+		square.Max_K = new config_server::Parameter<int>("/vision/square/Max_K", 2, 1, 20, 6);
+		square.Max_K_border = new config_server::Parameter<int>("/vision/square/Max_K_border", 2, 1, 15, 5);
 		
 		square.MinPointNum = new config_server::Parameter<int>("/vision/square/MinPointNum", 0, 1, 100, 3);
-		
-
 		
 		
 		graphNode.LineWidth = new config_server::Parameter<int>("/vision/graphNode/LineWidth", 0, 1, 100, 15);
@@ -513,8 +520,13 @@ public:
 		camera.useBagfile = new config_server::Parameter<bool>("/vision/camera/useBagfile", false);
 		
 		
-                calib.filePath = new config_server::Parameter<string>("/vision/calib/filePath", "/nimbro/share/visual_tracking/config/cCFile.yml");
+//               calib.filePath = new config_server::Parameter<string>(
+// 		                           "/vision/calib/filePath", 
+// 					   "/nimbro/share/visual_tracking/config/cCFile.yml");
 
+		calib.filePath = new config_server::Parameter<string>(
+				"/vision/calib/filePath",
+				ros::package::getPath("visual_tracking") + "/config/cCFile.yml");
 
 	        debug.showFieldHull= new config_server::Parameter<bool>("/vision/debug/showFieldHull", true);
 		debug.showSkeletonPixels= new config_server::Parameter<bool>("/vision/debug/showSkeletonPixels", true);
@@ -537,6 +549,12 @@ public:
 		
 		debug.useSolvePnP= new config_server::Parameter<bool>("/vision/debug/useSolvePnP", false);
 		debug.useRansac= new config_server::Parameter<bool>("/vision/debug/useRansac", false);
+		debug.saveProcessingTime= new config_server::Parameter<bool>("/vision/debug/saveProcessingTime", false);
+		debug.saveTrajectory= new config_server::Parameter<bool>("/vision/debug/saveTrajectory", false);
+		debug.visTrajectoryData= new config_server::Parameter<bool>("/vision/debug/visTrajectoryData", false);
+		debug.showTrajectory= new config_server::Parameter<bool>("/vision/debug/showTrajectory", false);
+		debug.useKFCovType0= new config_server::Parameter<bool>("/vision/debug/useKFCovType0", true);
+		debug.useYawSpeed= new config_server::Parameter<bool>("/vision/debug/useYawSpeed", true);
 		
 		
 		debug.useParticleFilter= new config_server::Parameter<bool>("/vision/debug/useParticleFilter", false);
@@ -553,6 +571,10 @@ public:
 		kalmanFilter.KFPositionCov = new config_server::Parameter<int>("/vision/kalmanFilter/KFPositionCov", 0, 1, 100000000, 1000000);
 		kalmanFilter.KFOrientationCov = new config_server::Parameter<int>("/vision/kalmanFilter/KFOrientationCov", 0, 1, 100000000, 1000000);
 		
+		kalmanFilter.KFSpeedX = new config_server::Parameter<float>("/vision/kalmanFilter/KFSpeedX", -0.5, 0.1,0.5, 0);
+		kalmanFilter.KFSpeedY = new config_server::Parameter<float>("/vision/kalmanFilter/KFSpeedY", -0.5, 0.1,0.5, 0);
+                kalmanFilter.KFSpeedYaw = new config_server::Parameter<float>("/vision/kalmanFilter/KFSpeedYaw", -0.5, 0.1,0.5, 0);
+
 		
 		particleFilter.ParticleNum = new config_server::Parameter<int>("/vision/particleFilter/ParticleNum", 0, 10, 5000, 200);
 		particleFilter.RandomSamplePct = new config_server::Parameter<float>("/vision/particleFilter/RandomSamplePct", 0, 0.02, 1, 0.01);

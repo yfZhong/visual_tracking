@@ -1,3 +1,9 @@
+
+// Created on: April 12, 2014
+//    
+
+//Authors: Yongfeng
+
 #ifndef M_MATH_H
 #define M_MATH_H
 
@@ -80,6 +86,7 @@ namespace vision
 		vector<Line>  UndistortedLines;
 		vector<float>  UndistortedNodeAngles; // ［-0.5*M_PI, 0.5*M_PI）
 		vector<Line>  TangentLines;
+		vector<float> NodeWeights;
 		
 		float sumOfLength;
 		float sumOfLengthUndistorted;

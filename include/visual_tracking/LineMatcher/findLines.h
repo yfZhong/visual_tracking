@@ -1,3 +1,8 @@
+/*
+
+Authors: Yongfeng
+
+*/
 #ifndef FINDLINES_H
 #define FINDLINES_H
 
@@ -75,79 +80,44 @@ namespace vision
 		float MeasConf;
 		
 		
-// 		int H_data  [ H ][ W ];
-// 		int V_data  [ H ][ W ];
-// 		int diagonal_data45  [ H ][ W ];
-// 		int diagonal_data135  [ H ][ W ];
-		
-		
-		void findSkeletons(FrameGrabber & CamFrm);
-// 		void applyLineFilter(/*in*/cv:: Mat Brightness_Channel,/*out*/std::vector< float > & weightedWhiteValues);
-		void applyLineFilter(/*in*/cv:: Mat& Brightness_Channel,/*in*/cv:: Mat & greenBinary,/*out*/float ( & weightedWhiteValues )[ H ][ W ]  );
+		void findBoundingRects(FrameGrabber & CamFrm);
+		void applyLineFilter(/*in*/cv:: Mat& Brightness_Channel,/* in */cv:: Mat & fieldConvexHull,/*in*/cv:: Mat & greenBinary,/*out*/float ( & weightedWhiteValues )[ H ][ W ]  );
 		void RetrieveSkeleton (/* in */cv:: Mat &fieldConvectHull, /* in */ const float ( & weightedWhiteValues )[ H ][ W ]  , /* out */ std::vector<cv::Point> &detectedPoins);
+		
 		void removeObstacleBoarder (/* in */ vector< vector <cv::Point > > ObstacleContours  ,/* in_out */ std::vector<pair<cv::Point, int> > & _detectedPoinsWithType );
 		
 		void regionGlow(const float ( & matrix )[ H ][ W ] , Mat & visited , cv:: Mat & _fieldConvexHull, std::vector<pair<cv::Point, int> > & _detectedPoinsWithType );
-		void RetrieveSkeleton2 ( /* in */const int ( & matrix )[ H ][ W ] , /* out */  std::vector<cv::Point> &detectedPoins );
+		void regionGlow(const float ( & matrix )[ H ][ W ] , Mat & visited , cv:: Mat & _fieldConvexHull, std::vector<cv::Point> & detectedPoins);
 		Mat skeletonMatrix_tmp ;
 		std::queue<Point> neighbors;
-		void push_back_neighbors(int i, int j);
+		
 		
 
 		
 		vector< pair<cv::Point, int> > squars;
 		Rectangle_Buffer Rectangles;
-		void findBoundingRects(FrameGrabber & CamFrm);
+		
 		void findSquares(FrameGrabber & CamFrm);
 		void findRectangle_Buffer();
 	        bool SortbyK(pair<cv::Point, int> & a, pair<cv::Point, int> & b);
+		
+		
 		// ****************************************************************************** //
                 void Smooth ( /* in_out */ float ( & matrix )[ H ][ W ]  );
-	
-		void findLines(FrameGrabber & CamFrm);
-		
-		void findhoughLines(std::vector<cv::Point> & undistortedPoints);
-		
-		
+		void push_back_neighbors(int i, int j);
 		bool SortFuncDescending(cv::Point i, cv::Point j);
-// 		bool GetLines(Mat &rawHSV, Mat & fieldMask,Mat &guiImg, bool SHOWGUI, const Mat &lineBinary,vector<LineSegment> &resLines);
 		
 	private:
 	        bool debug_line_detector;
 		int m_Top;
-		
-		void MergeLinesOnImg(std::vector< Line > m_LineBuffer_Before_Merge, std::vector< Line >& m_LineBuffer_After_Merge);
-		Line MergeTwoLinesOnImg(Line line1, Line line2, int id);
-		float getMeasurementConvexhullArea(std::vector< Line >& Lines);
-		float getMeasurementConfidence(std::vector< Line >& Lines);
 	
 		
 	
 		double fpsData;
 		
-		ros::NodeHandle nodeHandle;
-		ros::Subscriber odom_sub;
-		void getOdom(const gait_msgs::GaitOdomConstPtr & msg);
-	        Point3d curOdom;
-		
-		robotcontrol::RobotHeading headingData;
-		ros::Subscriber heading_sub_robotstate;
-	
-		double headingOffset;
-		double getHeading();
-		double pre_heading;
-		double heading_speed;
+
 		int count;
-		
-	        void handleHeadingData( const robotcontrol::RobotHeadingConstPtr& msg) //in radian
-		{
-			headingData=*msg;
-			if(count ==0 ){ heading_speed = 0; count++; }
-			else{ heading_speed = m_Math::RadianAngleDiff(getHeading() , pre_heading);  }
-			pre_heading = getHeading();
-		
-		}
-		
+
 		int num_change_min_ske;
 		int delta1;
 		int mean_b;

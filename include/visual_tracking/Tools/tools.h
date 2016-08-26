@@ -1,4 +1,8 @@
+//DistotionModel.cpp
+// Created on: April 12, 2014
+//    
 
+//Authors: Yongfeng
 #ifndef TOOLS_H
 #define TOOLS_H
 
@@ -170,6 +174,8 @@ namespace vision
 		    cv::Mat grayH0(Height, Width, CV_8UC1, data_for_vis);
 	    // 	cv::threshold(grayH0, grayH0, 8, 255, cv::THRESH_BINARY);
 		    cv::imshow(windowName ,grayH0);
+		    
+		    cv::imwrite( "/home/yvonne/Desktop/pic/line/applyKernel.jpg", grayH0 );
 		    cv::waitKey(1);
 		    delete[] data_for_vis;
 
@@ -180,6 +186,7 @@ namespace vision
 	    
 	    
 	    void generateKernelImg2(const char* kernelname);
+	    void generateKernelImg(const char* kernelname);
 	    //generate seeds for random variables
 	    void seed_rand();
 	    bool findPointInVector(cv::Point3f p, std::vector<cv::Point3f> points);

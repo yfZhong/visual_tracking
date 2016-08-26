@@ -1,5 +1,9 @@
 
+/*
 
+Authors: Yongfeng
+
+*/
 // #include "findNodes.h"
 #include <visual_tracking/LineMatcher/findNodes.h>
 
@@ -52,1365 +56,6 @@
 
 
 
-// ****************************************************************************** //
-void  FindNodes::findNodes ( /* in_out */int **matrix/* OUT Node_Buffer * m_NodeBuffer, */ )
-// ****************************************************************************** //
-{ 
-    
-      int **tmp;
-      tmp = new int*[subH];
-      for(int j=0;j<subH;j++)
-      {
-          tmp[j] = new int[subW]();
-      }
-  
-
-    m_NodeBuffer->clear( ); //<- Clear Node_Buffer for a new turn.
-
-    // * For each type of skeleton-pixels (peeks, 2 x ridges) do .... * //
-    for ( int i = 0; i < 3; i++ ) { // [0]
-
-	for ( int y = subH - 2; y > subH-m_Top-1; y-- ) { // [1]
-	    for ( int x = 1; x < subW - 1; x++ ) { // [2]
-
-
-		// * UNIT+i indicates, that skeleton-pixel belongs to type 'i'. * //
-		if ( matrix[ y ][ x ] == UNIT + i ) { // [3]
-
-		    const int num = m_NodeBuffer->size( );
-/*
-		    if ( num == MAX_NODES_NUM - 1 ) {
-			break;
-		    }
-*/
-		    // * Create new node at position (x,y). * //
-		    Node node;
-		    node.x_pos = x;
-		    node.y_pos = y;
-		    node.num_connected = 0;
-		    node.num_close = 0;
-		    node.crossing_type = Node::CT_Unknown;
-		    m_NodeBuffer->push_back(node);
-
-		    // * Examine the 3*3 Neighborhood of the new node.  * //
-		    for ( int dy = -1; dy < 2; dy++ ) { // [4]
-			for ( int dx = -1; dx < 2; dx++ ) { // [5]
-
-			    const int yp = y + dy;
-			    const int xp = x + dx;
-			    const int val = matrix[ yp ][ xp ];
-
-			    // * Two node-neighborhoods are overlapping. * //
-			    if ( ( val > 0 ) && ( val < UNIT ) ) { // [6]
-				// * The corresponding indicator (val+UNIT*2) is set. * //
-				matrix[ yp ][ xp ] += UNIT * 2;
-				tmp[ yp ][ xp ] = num;
-			    }
-			    // * A 'clean' skeleton-pixel in the neighborhood of the new node is detected and marked. * //
-			    else if ( val >= UNIT && val < UNIT * 2 ) { // [6]
-				matrix[ yp ][ xp ] = num + 1;
-			    }
-			    // * Three node-neighborhoods are overlapping, the corresponding marker is set. * //
-			    else if ( val >= UNIT * 2 ) { // [6]
-				matrix[ yp ][ xp ] = UNIT * 3;
-			    }
-			} // [5]
-		    } // [4]
-		} // [3]
-/*
-		if ( num == MAX_NODES_NUM - 1 ) { // [3]
-		    break;
-		}
-*/
-	    } // [2]
-	} // [1]
-
-    } // [0]
-    // * Connect all nodes where exactly 2 neighborhoods overlap. * //
-    for ( int y = subH - 2; y > subH-m_Top-1; y-- ) { // [0]
-	for ( int x = 1; x < subW - 1; x++ ) { // [1]
-
-	    const int val = matrix[ y ][ x ];
-
-	    if ( ( val > UNIT * 2 ) && ( val < UNIT * 3 ) ) {
-		if ( !is_connected( ( val - ( UNIT * 2 + 1 ) ), ( tmp[ y ][ x ] ) ) ) {
-		      connect_nodes( ( val - ( UNIT * 2 + 1 ) ), ( tmp[ y ][ x ] ) );
-		}
-	    }
-
-	} // [1]
-    } // [0]
-    
-    
-    
-    for (int i=0;i<subH;i++)
-    {
-    delete[] tmp[i]; 
-    }                     
-    delete[] tmp; 
-
-    return;
-
-}; // END of FindNodes METHOD
-
-
-// ****************************************************************************** //
-void FindNodes::ConnectTouchingNodes ( /* in */ int **matrix /* IN_OUT Node_Buffer * m_NodeBuffer, */ )
-// ****************************************************************************** //
-{
-
-    // * Examine the whole skeleton * //
-    for ( int y = subH - 2; y > subH-m_Top-1; y-- ) { // [1]
-	for ( int x = 1; x < subW - 1; x++ ) { // [0]
-
-	    int value = matrix[ y ][ x ];
-
-	    // * Is (x,y) in a non-overlapping node-neighborhood ? * //
-	    if ( ( value > 0 ) && ( value < UNIT ) ) { // [2]
-		int last_val = 0;
-		int value_id = value - 1;
-
-		// * Examine parts of the neighborhood * //
-		for ( int dy = 0; dy < 3; dy++ ) { // [3]
-		    for ( int dx = 0; dx < 2; dx++ ) { // [4]
-
-			if ( ( dx == 0 ) && ( dy < 2 ) ) { // [5]
-			    continue;
-			}
-			int val = matrix[ y + dy - 1 ][ x + dx ];
-
-			// * Is neighbor-pixel in a non-overlapping node-neighborhood AND
-			// * neighbor-pixel != actual pixel AND no connection has just been established ? * //
-			if ( ( val > 0 ) && ( val < UNIT ) && ( val != value ) && ( val != last_val ) ) { // [5]
-			    last_val = val;
-			    val--;
-			    // * Connect them, if they're not already connected * //
-			    if ( !is_connected( val, value_id ) ) { // [6]
-				  connect_nodes( val, value_id );
-			    }
-
-			} // [5]
-
-		    } // [4]
-		} // [3]
-
-	    } // [2]
-
-	} // [1]
-    } // [0]
-
-    return;
-
-}; // END of ConnectTouchingNodes METHOD
-
-void FindNodes::FindMoreNodes ( /* in */ int **matrix /* IN_OUT Node_Buffer * m_NodeBuffer, */ )
-// ****************************************************************************** //
-{
-// * For all nodes do ... * //
-    for ( unsigned int i = 0; i < m_NodeBuffer->size( ); i++ ) { // [0]
-
-	// * 0. Skip for nodes of degree > 1 * //
-	if ( ( * m_NodeBuffer )[ i ].num_connected > 1 ) { // [1]
-	    continue;
-	}
-
-	// * 1. Try to split nodes with degree 0 into two with degree 1 * //
-	if ( ( * m_NodeBuffer )[ i ].num_connected == 0 ) { // [1]
-
-	    // * Examine the 'far' neighborhood of the node * //
-	    for ( int dy = -1; dy < 2; dy += 2 ) { // [2]
-		for ( int dx = -1; dx < 2; dx += 2 ) { // [3]
-
-		    const int x = ( * m_NodeBuffer )[ i ].x_pos + dx;
-		    const int y = ( * m_NodeBuffer )[ i ].y_pos + dy;
-
-		    // * Is (x,y) a skeleton-pixel ? * //
-		    if ( matrix[ y ][ x ] > 0 ) { // [4]
-
-			// * Create new node at (x,y), connect it to the examined one * //
-			Node node;
-			node.x_pos = x;
-			node.y_pos = y;
-			node.num_connected = 0;
-			node.num_close = 0;
-
-			m_NodeBuffer->push_back( node );
-			connect_nodes( i, m_NodeBuffer->size( ) - 1 );
-
-			break;
-		    } // [4]
-
-		} // [3]
-
-		if ( ( * m_NodeBuffer )[ i ].num_connected != 0 ) { // [3]
-		    break;
-		}
-	    } // [2]
-
-	} // [1]
-
-	// * 2. Try to move nodes with degree 1 to the end of the skeleton - line * //
-	if ( ( * m_NodeBuffer )[ i ].num_connected == 1 ) { // [1]
-
-	    int j = ( * m_NodeBuffer )[ i ].connected[ 0 ];
-
-	    // * Chose (x,y) in the continued direction of node_j -> node_i * //
-	    int dx = ( * m_NodeBuffer )[ i ].x_pos - ( * m_NodeBuffer )[ j ].x_pos;
-	    if ( abs( dx ) > 1 ) { // [2]
-		dx /= 2;
-	    }
-	    int dy = ( * m_NodeBuffer )[ i ].y_pos - ( * m_NodeBuffer )[ j ].y_pos;
-	    if ( abs( dy ) > 1 ) { // [2]
-		dy /= 2;
-	    }
-	    int x = ( * m_NodeBuffer )[ i ].x_pos + dx;
-	    int y = ( * m_NodeBuffer )[ i ].y_pos + dy;
-	    x = min( subW - 1, x );    
-	    x = max( 0,                x );
-	    y = min( subH - 1, y );
-	    y = max( 0,                 y );
-
-	    // * Is (x,y) skeleton-pixel ? Move node_i to new position * //
-	    if ( matrix[ y ][ x ] > 0 ) { // [2]
-		( * m_NodeBuffer )[ i ].x_pos = x;
-		( * m_NodeBuffer )[ i ].y_pos = y;
-	    }
-	    // * If not, examine a small neighborhood of (x,y) * //
-	    else { // [2]
-
-		for ( int ddy = -1; ddy < 2; ddy++ ) { // [3]
-		    for ( int ddx = -1; ddx < 2; ddx++ ) { // [4]
-
-			if ( abs( ddx ) + abs( ddy ) != 1 ) { // [5]
-			    continue;
-			}
-			x = ( * m_NodeBuffer )[ i ].x_pos + dx + ddx;
-			y = ( * m_NodeBuffer )[ i ].y_pos + dy + ddy;
-			x = min( subW - 1, x );
-			x = max( 0,     x );
-			y = min( subH - 1, y );
-			y = max( 0,     y );
-
-			// * Don't move to the same position * //
-			if ( ( x == ( * m_NodeBuffer )[ i ].x_pos ) && ( y == ( * m_NodeBuffer )[ i ].y_pos ) ) { // [5]
-			    continue;
-			}
-			// * Is (x_n, y_n) a skeleton-pixel ? Move node_i to (x_n, y_n) * //
-			if ( matrix[ y ][ x ] > 0 ) { // [5]
-			    ( * m_NodeBuffer )[ i ].x_pos = x;
-			    ( * m_NodeBuffer )[ i ].y_pos = y;
-			    break;
-			}
-		    } // [4]
-		    if ( ddy < 2 ) { // [4]
-			break;
-		    }
-		} // [3]
-
-	    } // [2]
-
-	} // [1]
-
-    } // [0]
-
-    return;
-
-}; // END of FindMoreNodes METHOD
-
-
-// ****************************************************************************** //
-void FindNodes::FindCloseNodes ( /* in */const float ( & weightedWhiteValues )[ H ][ W ] /* IN const Trans_Buffer * m_TransBuffer, */ /* IN_OUT Node_Buffer * m_NodeBuffer, */ )
-// ****************************************************************************** //
-{
-
-    int i = -1, j = -1;
-    int rad;
-//     int fac; //<- Indicates the size of the gaps, which may be closed.
-    int ang, dist;
-    
-    int  LINE_WIDTH = params.graphNode.LineWidth->get();
-    int  SMALL_ANG = params.graphNode.SmallAngle->get();
-//     fac = ( H >> 2 ) + LINE_WIDTH * 2;
-    rad = max<int>( 10, ( LINE_WIDTH ) );
-    rad = rad * rad;
-
-    // * For all nodes do .... * //
-    Node_Buffer::iterator it;
-    for ( it = m_NodeBuffer->begin( ); it != m_NodeBuffer->end( ); it++ ) { // [0]
-	i++;
-	j = -1;
-
-	it->num_close = 0;
-
-	// * Skip all nodes with degree >2. * //
-	if ( it->num_connected > 2 ) { // [1]
-	    continue;
-	}
-	// * Continue, if degree(node)=2 AND angle too large. * //
-	if ( ( it->num_connected == 2 ) &&
-	    ( angle_nodes( it->connected[ 0 ], i, it->connected[ 1 ] ) > 90 ) ) { // [1]
-		continue;
-	}
-
-	// * Examine all other nodes. * //
-	Node_Buffer::iterator it2;
-	for ( it2 = m_NodeBuffer->begin( ); it2 != m_NodeBuffer->end( ); it2++ ) { // [1*]
-	    j++;
-
-	    if ( it2 == it ) { // [2]
-		continue;
-	    }
-	    if ( it2->num_connected == MAX_CONN ) { // [2]
-		continue;
-	    }
-
-	    // * If distance between node_i and node_j is too large or if they are connected, continue. * //
-	    dist = distance_nodes( i, j );
-	    if ( dist > rad ) { // [2]
-		continue;
-	    }
-	    if ( is_connected( i, j ) ) { // [2]
-		continue;
-	    }
-	    if ( it->num_close == MAX_CLOSE ) { // [2]
-		break;
-	    }
-	    // * If a small loop would be produced, continue. * //
-	    if ( closes_loop( i, j ) ) { // [2]
-		continue;
-	    }
-	    if ( it->num_connected == 1 ) { // [2]
-		// * If angle (node_k->node-i) with new edge (node_i->node-j) is too small, continue. * //
-		if ( ( ang = angle_nodes( it->connected[ 0 ], i, j ) ) < SMALL_ANG ) { // [2]
-		    continue;
-		}
-	    }
-	    else if ( it->num_connected == 2 ) { // [2]
-		// * If angle MIN((node_k1->node-i), (node_k2->node-i)) with new edge
-		// * (node_i->node-j) is too small, continue. * //
-		if ( ( ang = min( angle_nodes( it->connected[ 0 ], i, j ), angle_nodes( it->connected[ 1 ], i, j ) ) ) < SMALL_ANG ) { // [3]
-			continue;
-		}
-
-	    }
-	    else { // [2]
-		ang = 120;
-	    }
-
-	    // * Evaluate the significance (adj) of the new edge. * //
-	    it->close_id[ it->num_close ] = j;
-	    it->close_adj[ it->num_close ] = /*fac **/ ( ang - SMALL_ANG ) * black_line_value( weightedWhiteValues, i, j ) / ( dist + 1 );//prefer large ang, small dist, high brightness
-	    it->num_close++;
-
-	    if ( it->num_close == MAX_CLOSE ) { // [2]
-		break;
-	    }
-
-	} // [1*]
-
-    } // [0]
-
-    return;
-
-}; // END of FindCloseNodes METHOD
-
-
-
-// ****************************************************************************** //
-
-void FindNodes::ConnectCloseNodes ( /* in */ const float ( & weightedWhiteValues )[ H ][ W ]/* IN const Trans_Buffer * m_TransBuffer, */ /* IN_OUT Node_Buffer * m_NodeBuffer, */ )
-// ****************************************************************************** //
-{
-
-    int min_adj;
-    int adj, max_adj;
-    int i, j, k, l, max_i = 0, max_j = 0;
-    int num_j, angle, max_angle, min_angle;
-    int iteration = 0;
-    int num_ends = 0;
-    int MinAdj = params.graphNode.Min_adj->get();
-
-    // * compute the number of open ends. * //
-    Node_Buffer::iterator it;
-    for ( it = m_NodeBuffer->begin( ); it != m_NodeBuffer->end( ); it++ ) {
-	if ( it->num_connected < 2 ) {
-	    num_ends += 2 - it->num_connected;
-	}
-    }
-//     cout<<"num_ends s: "<<num_ends<<endl;
-    
-    // * find the best candidate connection and connect the nodes i and j, until termination
-    // * condition is TRUE. * //
-    do {
-// 	min_adj = max( MinAdj, 500000 - ( MinAdj * ( int ) num_ends ) );
-// 	min_adj = max( 100, 1000000 - ( MinAdj * ( int ) num_ends ) );
-	min_adj = max(1, MinAdj);
-	max_adj = min_adj;
-        
-	i = -1;
-	// * for all nodes ... * //
-	for ( it = m_NodeBuffer->begin( ); it != m_NodeBuffer->end( ); it++ ) {
-	    i++;
-
-	    // * for all candidates ... * //
-	    for ( k = 0; k < it->num_close; k++ ) {
-
-		j = it->close_id[ k ];
-		adj = it->close_adj[ k ];
-//                 cout<<"adj: "<< adj<<endl;
-		num_j = ( * m_NodeBuffer )[ j ].num_connected;
-
-		if ( num_j != 2 ) {
-		    adj += adj / 2;
-		}
-		max_angle = 90;
-		min_angle = 90;
-
-		for ( l = 0; l < num_j; l++ ) {
-		    angle = angle_nodes( i, j, ( * m_NodeBuffer )[ j ].connected[ l ] );
-		    if ( angle > max_angle ) {
-			max_angle = angle;
-		    }
-		    else if ( angle < min_angle ) {
-			min_angle = angle;
-		    }
-		}
-		adj += ( adj * ( max_angle - 90 ) ) / 90;
-		adj += ( adj * min_angle ) / 90;
-		if ( closes_loop( i, j ) ) {
-		    continue;
-		}
-		if ( adj > max_adj ) {
-		    max_adj = adj, max_i = i, max_j = j;
-		}
-	    }	    
-	    
-	}
-	// * If the best candidate is good enough, insert it. * //
-	if ( max_adj > min_adj ) {
-
-	    // *  update the number of open ends. * //
-	    if ( ( * m_NodeBuffer )[ max_i ].num_connected < 2 ) {
-		num_ends--;
-	    }
-	    if ( ( * m_NodeBuffer )[ max_j ].num_connected < 2 ) {
-		num_ends--;
-	    }
-	    connect_nodes( max_i, max_j );
-
-	    update_close_nodes( weightedWhiteValues, max_i );
-	    if ( ( * m_NodeBuffer )[ max_j ].num_connected < 4 ) {
-		update_close_nodes( weightedWhiteValues, max_j );
-	    }
-	    iteration = 0;
-	}
-	else {
-	    if ( iteration == 0 ) {
-		FindCloseNodes( weightedWhiteValues );
-	    }
-	    iteration++;
-	}
-    } while ( max_adj > min_adj || iteration < 2 );
-   
-  
-    return;
-
-}; // END of ConnectCloseNodes METHOD
-
-
-  // ****************************************************************************** //
-  void FindNodes::SmoothNodes ( /* IN_OUT Node_Buffer * m_NodeBuffer, */ )
-  // ****************************************************************************** //
-  {
-      int i;
-      int j, k;
-      i=-1;
-      Node_Buffer::iterator it;
-      for ( it = m_NodeBuffer->begin( ); it != m_NodeBuffer->end( ); it++ ) {
-          ++i;
-	  
-	  if ( it->num_connected != 2  || (it->num_connected==2 &&  (angle_nodes(it->connected[ 0 ], i, it->connected[ 1 ])-90)<30)) {
-	      it->f_x_pos = ( float ) it->x_pos;
-	      it->f_y_pos = ( float ) it->y_pos;
-	      continue;
-	  }
-	
-	 
-	  it->f_x_pos = ( float ) it->x_pos * 2;
-	  it->f_y_pos = ( float ) it->y_pos * 2;
-
-	  for ( j = 0; j < it->num_connected; j++ ) {
-	      k = it->connected[ j ];
-
-	      it->f_x_pos += ( * m_NodeBuffer )[ k ].x_pos;
-	      it->f_y_pos += ( * m_NodeBuffer )[ k ].y_pos;
-	  }
-      }
-      i=-1;
-      for ( it = m_NodeBuffer->begin( ); it != m_NodeBuffer->end( ); it++ ) {
-          ++i;
-	  if ( it->num_connected != 2 || (it->num_connected==2 &&  (angle_nodes(it->connected[ 0 ], i, it->connected[ 1 ])-90)<30)) {
-	      continue;
-	  }
-	  
-	  it->f_x_pos /= 4.0;
-	  it->f_y_pos /= 4.0;
-      }
-
-      return;
-
-  }; // END of SmoothNodes METHOD
-
-
-  
-  
-// ****************************************************************************** //
-void FindNodes::DeleteNodes ( /* IN const Trans_Buffer * m_TransBuffer, */ /* IN_OUT Node_Buffer * m_NodeBuffer, */ /* in */ )
-// ****************************************************************************** //
-{
-
-    int i, j, k, l, m, n;
-    int max_angle;
-    int counter;
-    int del, ang;
-    int num_j, num_k;
-    float min_dist, max_dist, dist;
-    float dist_j, dist_k;
-    int a;
-    int min_ang;
-    int angle;
-    
-    int MergeJointDist = params.graphNode.MergeJointDist->get();
-    int MinDistForMerge =  params.graphNode.MinDistForMerge->get();
-
-    // * Parameter indicating 'large' or 'small', depending on the size of the image. * //
-    max_dist = ( float ) max(9,  params.graphNode.MaxDist->get() );
-//     ( float ) max( 9.0, ( H * H ) / 128.0 );
-    
-    
-    ang = 180;
-
-    // * try to delete nodes for decreasing values of ang * //
-      do { // [0]
-	counter = 0;
-	Node_Buffer::iterator it_i;
-	i = -1;
-	for ( it_i = m_NodeBuffer->begin( ); it_i != m_NodeBuffer->end( ); it_i++ ) { // [1]
-	    i++;
-
-	    // * If deg(node_i)=2 do ... * //
-	    if ( it_i->num_connected == 2 ) { // [2]
-
-		del = 0;
-
-		j = it_i->connected[ 0 ];
-		num_j = ( * m_NodeBuffer )[ j ].num_connected;
-
-		k = it_i->connected[ 1 ];
-		num_k = ( * m_NodeBuffer )[ k ].num_connected;
-
-		dist_j = f_distance_nodes( i, j ,m_NodeBuffer);
-		dist_k = f_distance_nodes( i, k ,m_NodeBuffer);
-		min_dist = min( dist_j, dist_k );
-
-		if ( min_dist < max_dist ) { // [3]
-		    min_ang = 90, angle = ang - 30;
-		}
-		else { // [3]
-		    min_ang = 120, angle = ang;
-		}
-		if ( ( dist_k < max_dist * 2 ) && ( ( num_k == 1 ) || ( num_k >= 3 ) ) ) { // [3]
-		    angle -= 10, min_ang -= 20;
-		}
-		if ( ( dist_j < max_dist * 2 ) && ( ( num_j == 1 ) || ( num_j >= 3 ) ) ) { // [3]
-		    angle -= 10, min_ang -= 20;
-		}
-		// * If angle at node_i is large, delete node_i. * //
-		if ( ( a = ( int ) f_angle_nodes( j, i, k) ) > angle ) { // [3]
-		    del = 1;
-		}
-		// * If angle at node_i is small, don't delete node_i. * //
-		else { // [3]
-
-		    if ( a < min_ang ) { // [4]
-			continue;
-		    }
-
-		    // * Look at nodes that have a distance of 2 to node_i. * //
-		    if ( ( num_j > 1 ) && ( dist_j < max_dist * 2 ) ) { // [4]
-			max_angle = 0;
-			for ( n = 0; n < num_j; n++ ) { // [5]
-
-			    if ( ( l = ( * m_NodeBuffer )[ j ].connected[ n ] ) == i ) { // [6]
-				continue;
-			    }
-			    a = ( int ) f_angle_nodes( k, i, l  );
-			    if ( a > max_angle ) { // [6]
-				max_angle = a;
-			    }
-			}
-			if ( max_angle > angle ) { // [5]
-			    del = 1;
-			}
-
-		    } // [4]
-
-		    if ( ( del == 0 ) && ( num_k > 1 ) && ( dist_k < max_dist * 2 ) ) { // [4]
-			max_angle = 0;
-			for ( n = 0; n < num_k; n++ ) { // [5]
-
-			    if ( ( l = ( * m_NodeBuffer )[ k ].connected[ n ] ) == i ) { // [6]
-				continue;
-			    }
-			    a = ( int ) f_angle_nodes( j, i, l );
-			    if ( a > max_angle ) { // [6]
-				max_angle = a;
-			    }
-			}
-			if ( max_angle > angle ) { // [5]
-			    del = 1;
-			}
-
-		    } // [4]
-
-		} // [3]
-
-		// * if node_i is detected for deletion,
-		// * check some conditions that prevent node_i from being deleted. * //
-		if ( del ) {  // [3] //<- don't delete, if the resultiong edge is too long.
-
-		    if ( ( dist_j + dist_k > max_dist * 6 ) && ( dist_k > max_dist * 2 ) && ( dist_j > max_dist * 2 ) ) { // [4]
-			continue;
-		    }
-		    // * don't delete, if an accute angle would be produced. * //
-		    if ( num_j == 2 ) { // [4]
-
-			if ( ( * m_NodeBuffer )[ j ].connected[ 0 ] == i ) { // [5]
-			    l = ( * m_NodeBuffer )[ j ].connected[ 1 ];
-			}
-			else { // [5]
-			    l = ( * m_NodeBuffer )[ j ].connected[ 0 ];
-			}
-			if ( ( f_angle_nodes( l, j, k ) <= 100 ) && ( f_angle_nodes( l, j, i ) > 100 ) ) { // [5]
-			    continue;
-			}
-
-		    } // [4]
-
-		    if ( num_k == 2 ) { // [4]
-
-			if ( ( * m_NodeBuffer )[ k ].connected[ 0 ] == i ) { // [5]
-			    l = ( * m_NodeBuffer )[ k ].connected[ 1 ];
-			}
-			else { // [5]
-			    l = ( * m_NodeBuffer )[ k ].connected[ 0 ];
-			}
-			if ( ( f_angle_nodes( l, k, j ) <= 100 ) && ( f_angle_nodes( l, k, i ) > 100 ) ) { // [5]
-			    continue;
-			}
-
-		    } // [4]
-
-		    // * delete node_i by removing it's connections. * //
-		    disconnect_nodes( i, j , m_NodeBuffer);
-		    disconnect_nodes( i, k , m_NodeBuffer);
-		    if(closes_loop(j,k)){continue;}
-		    
-		    if ( !is_connected( j, k ) ) { // [4]
-			connect_nodes( j, k );
-		    }
-		    counter++;
-
-		} // [3]
-
-	    }  // [2]
-
-	    // * if node_i is an end of a line. * //
-	    else if ( it_i->num_connected == 1 ) {  // [2]
-
-		j = it_i->connected[ 0 ];
-
-		// * delete node_i, if there is a joint, or a cross near by. * //
-		if ( ( * m_NodeBuffer )[ j ].num_connected < 3 ) {  // [3]
-		    continue;
-		}
-		if ( ( ( * m_NodeBuffer )[ j ].num_connected == 3 ) && ( f_distance_nodes( i, j ,m_NodeBuffer) > max_dist ) ) {  // [3]
-		    continue;
-		}
-		if ( ( ( * m_NodeBuffer )[ j ].num_connected == 4 ) && ( f_distance_nodes( i, j ,m_NodeBuffer) > max_dist / 2 ) ) {  // [3]
-		    continue;
-		}
-		disconnect_nodes( i, j ,m_NodeBuffer);
-		counter++;
-
-	    }  // [2]
-
-	    // * if node_i is a joint. * //
-	    else if ( it_i->num_connected == 3 ) {  // [2]
-		min_dist = FLT_MAX; //<- maximum distance.
-		j = -1;
-		for ( k = 0; k < 3; k++ ) {  // [3]
-		    m = it_i->connected[ k ];
-
-		    dist = f_distance_nodes( i, m ,m_NodeBuffer);
-
-		    if ( ( ( * m_NodeBuffer )[ m ].num_connected == 3 ) && ( dist < min_dist ) ) {  // [4]
-			j = m, min_dist = dist;
-		    }
-
-		}  // [3]
-
-		// * try to detect and merge two connected joints to a cross, if they are close. * //
-		if ( j > -1 ) {  // [3]
-
-		    if ( min_dist > MergeJointDist ) {  // [4]
-			continue;
-		    }
-		    disconnect_nodes( i, j ,m_NodeBuffer );
-
-		    num_j = ( * m_NodeBuffer )[ j ].num_connected;
-
-		    for ( m = 0; m < num_j; m++ ) {  // [4]
-			l = ( * m_NodeBuffer )[ j ].connected[ 0 ];
-			disconnect_nodes( j, l ,m_NodeBuffer );
-			if ( !is_connected( i, l ) && !closes_loop(i,l)) {  // [5]
-			    connect_nodes( i, l );
-			}
-
-		    } // [4]
-
-		    it_i->f_x_pos = ( float ) ( ( it_i->f_x_pos + ( * m_NodeBuffer )[ j ].f_x_pos ) / 2.0 );
-		    it_i->f_y_pos = ( float ) ( ( it_i->f_y_pos + ( * m_NodeBuffer )[ j ].f_y_pos ) / 2.0 );
-
-		    counter++;
-
-		}  // [3]
-
-	    }  // [2]
-
-	}  // [1]
-
-	if ( ang >= 155 ) {  // [1]
-	    ang -= 5;
-	}
-
-      } while ( counter > 0 || ang >= 155 );   // [0]
-
-
-    Node_Buffer::iterator it;
-/*
-    // * Remove Nodes that are not surrounded by Green. * //
-    i = -1;
-    int green_count;
-
-    for ( it = m_NodeBuffer->begin( ); it != m_NodeBuffer->end( ); it++ ) { // [0]
-	i++;
-
-	if ( 0 == it->num_connected ) { // [1]
-	    continue;
-	}
-
-	green_count = 0;
-
-	if ( it->x_pos > 2 && it->x_pos < W - 2 && it->y_pos < H - 2 ) { // [1]
-
-	    for ( int y = -2; y < 3; y++ ) { // [2]
-		for ( int x = -2; x < 3; x++ ) { // [3]
-
-		    if ( matrix[ it->y_pos + y ][ it->x_pos + x ] > 0 ) { // [4]
-			green_count++;
-		    }
-
-		} // [3]
-	    } // [2]
-
-	} // [1]
-
-	if ( green_count < 5 ) { // [1]
-
-	    for ( int ind = 0; ind < it->num_connected; ind++ ) { // [2]
-
-		disconnect_nodes( m_NodeBuffer, i, it->connected[ ind ] ,m_NodeBuffer);
-	    }
-
-	} // [1]
-
-    } // [0]
-*/
-
-    // * Merge nodes that are too close. * //
-    
-
-    
-    int counter2=1; 
-    
-   
-    while(counter2 >0){
-        counter2 = 0;
-	i = -1; 
-	int tmpj = 0, tmpk =0;
-	for ( it = m_NodeBuffer->begin( ); it != m_NodeBuffer->end( ); it++ ) { // [0]
-	    i++;
-
-	    if ( 2 != it->num_connected ) { // [1]
-		continue;
-	    }
-
-	    j = it->connected[ 0 ];
-	    k = it->connected[ 1 ];
-
-	   
-	    if ( f_distance_nodes( i, j ,m_NodeBuffer) <= MinDistForMerge ) { // [1]
-
-		if ( 2 == ( * m_NodeBuffer )[ j ].num_connected ) { // [2]
-		    
-		    for ( int ind = 0; ind < 2; ind++ ) { // [3]
-			if ( i != ( * m_NodeBuffer )[ j ].connected[ ind ] ) { // [4]
-			    tmpj = ( * m_NodeBuffer )[ j ].connected[ ind ];
-			}
-		    }
-
-		    if ( angle_nodes( i, j, tmpj ) > angle_nodes( k, i, j ) ) { // [3]
-		        disconnect_nodes ( j, i ,m_NodeBuffer  );
-		        disconnect_nodes ( j, tmpj ,m_NodeBuffer);
-			if(!closes_loop(i, tmpj) && !is_connected(i, tmpj)){
-			    connect_nodes    ( i, tmpj );
-			    
-			}
-			counter2++;
-
-		    }
-
-
-		} // [2]
-
-	    } // [1]
-	    if ( f_distance_nodes( i, k ,m_NodeBuffer) <= MinDistForMerge) { // [1]
-
-		if ( 2 == ( * m_NodeBuffer )[ k ].num_connected ) { // [2]
-		    
-		    for ( int ind = 0; ind < 2; ind++ ) { // [3]
-			if ( i != ( * m_NodeBuffer )[ k ].connected[ ind ] ) { // [4]
-			    tmpk = ( * m_NodeBuffer )[ k ].connected[ ind ];
-// 			    if(tmp2==tmp1){continue;}
-			}
-		    }
-		  
-		    if ( angle_nodes( i, k, tmpk ) > angle_nodes( k, i, j ) ) { // [3]
-                        disconnect_nodes ( k, i ,m_NodeBuffer);
-			disconnect_nodes ( k, tmpk ,m_NodeBuffer);
-			if(!closes_loop(i, tmpk)&& !is_connected(i, tmpk)){
-			    connect_nodes    ( i, tmpk );
-			}
-			counter2++;
-
-		    }
-
-
-		} // [2]
-
-	    } // [1]
-
-
-    /*
-	    // * Delete nodes that doesn't have any connection. * //
-	    it = m_NodeBuffer->begin( );
-	    while ( it != m_NodeBuffer->end( ) ) {
-		
-		if ( 0 == it->num_connected ) {
-		    it = m_NodeBuffer->erase( it );
-		}
-		else {
-		    it++;
-		}
-
-	    }
-    */
-
-	} // [0]
-    
-    }
-  
-  
-  float MaxDistanceForMergeNode1 = params.graphNode.MaxDistanceForMergeNode1->get();
-		
-  
-   i=-1;
-   Node_Buffer::iterator it1,it2;
-   for ( it1 = m_NodeBuffer->begin( ); it1 != m_NodeBuffer->end( ); it1++ ) { // [0]
-        ++i;
-	if(it1->num_connected >= MAX_CONN ||it1->num_connected ==0){continue;}
-	    int j=-1;
-	    for ( it2 = m_NodeBuffer->begin( ); it2!= m_NodeBuffer->end( ); it2++ ) { // [0]
-		  ++j;
-		  if( i==j ||it2->num_connected ==0 ||(it2->num_connected +it1->num_connected) > MAX_CONN 
-		    || is_connected(i,j ) ||closes_loop(i,j)){continue;}
-		  
-		  if(f_distance_nodes(i,j, m_NodeBuffer ) < MaxDistanceForMergeNode1){
-		    
-		      bool merge=true;
-		     
-		      for( int m=0; m<it2->num_connected; ++m ){
-			  if(closes_loop(i, it2->connected[m])){merge=false;break;}
-		      }
-		      
-		      if(merge==true){
-			   for( int m=0; m<it2->num_connected; ++m ){
-				disconnect_nodes(j, it2->connected[m],  m_NodeBuffer);
-				connect_nodes(i, it2->connected[m] );
-			    }
-			    (* m_NodeBuffer)[i].f_x_pos +=(* m_NodeBuffer)[j].f_x_pos;
-			    (* m_NodeBuffer)[i].f_y_pos +=(* m_NodeBuffer)[j].f_y_pos;
-			    
-			    (* m_NodeBuffer)[i].f_x_pos /=2.0;
-			    (* m_NodeBuffer)[i].f_y_pos /=2.0;
-
-		      }
-		    
-		      
-
-		  }
-	    }
-   }
-  
- 
-
-    return;
-
-} // END of DeleteNodes METHOD
-
-  
-
-  
-  void  FindNodes::InsertCrossPoints( /* IN_OUT Node_Buffer * m_NodeBuffer, */ )
-// ****************************************************************************** //
-{
-
-    int a, b, c, d;
-    int i, j;
-    float x, y;
-    int num_nodes;
-    Node_Buffer::iterator it_old_end = m_NodeBuffer->end( );
-
-    a = -1;
-    Node_Buffer::iterator it_a;
-    for ( it_a = m_NodeBuffer->begin( ); it_a != ( it_old_end - 1 ); it_a++ ) { // [0]
-	a++;
-
-	for ( i = 0; i < it_a->num_connected; i++ ) { // [1]
-
-	    c = a;
-	    Node_Buffer::iterator it_c;
-	    for ( it_c = ( it_a + 1 ); it_c != it_old_end; it_c++ ) { // [2]
-		c++;
-
-		for ( j = 0; j < it_c->num_connected; j++ ) { // [3]
-
-		    b = it_a->connected[ i ];
-		    d = it_c->connected[ j ];
-
-		    // * Create new node at intersection. * //
-		    if ( intersect( a, b, c, d, &x, &y ) ) { // [4]
-
-			// * Create a new node struct. * //
-			Node node;
-			node.x_pos = x;
-			node.y_pos = y;
-			node.f_x_pos = x;
-			node.f_y_pos = y;
-			node.num_connected = 0;
-			m_NodeBuffer->push_back( node );
-
-			num_nodes = m_NodeBuffer->size( ) - 1;
-
-			disconnect_nodes( a, b ,m_NodeBuffer);
-			disconnect_nodes( c, d ,m_NodeBuffer);
-			connect_nodes( a, num_nodes );
-			connect_nodes( b, num_nodes );
-			connect_nodes( c, num_nodes );
-			connect_nodes( d, num_nodes );
-
-		    }
-
-		} // [3]
-
-	    } // [2]
-
-	} // [1]
-
-    } // [0]
-
-    return;
-
-}; // END of InsertCrossPoints METHOD
-
-  // ****************************************************************************** //
- 
-// ****************************************************************************** //
-  void FindNodes::SmoothNodes2 ( /* IN_OUT Node_Buffer * m_NodeBuffer, */ )
-  // ****************************************************************************** //
-  {
-      int i;
-      int j, k;
-      i=-1;
-      Node_Buffer::iterator it;
-      for ( it = m_NodeBuffer->begin( ); it != m_NodeBuffer->end( ); it++ ) {
-	  if ( it->num_connected > 0){  
-	    it->x_pos =  it->f_x_pos;
-	    it->y_pos =  it->f_y_pos;
-	  }
-      }
-      
-      
-      
-      for ( it = m_NodeBuffer->begin( ); it != m_NodeBuffer->end( ); it++ ) {
-          ++i;
-	  
-	  if ( it->num_connected != 2  || (it->num_connected==2 &&  (angle_nodes(it->connected[ 0 ], i, it->connected[ 1 ])-90)<40)) {
-	      continue;
-	  }
-
-	  it->f_x_pos = ( float ) it->x_pos * 2;
-	  it->f_y_pos = ( float ) it->y_pos * 2;
-
-	  for ( j = 0; j < it->num_connected; j++ ) {
-	      k = it->connected[ j ];
-
-	      it->f_x_pos += ( * m_NodeBuffer )[ k ].x_pos;
-	      it->f_y_pos += ( * m_NodeBuffer )[ k ].y_pos;
-	  }
-      }
-      i=-1;
-      for ( it = m_NodeBuffer->begin( ); it != m_NodeBuffer->end( ); it++ ) {
-          ++i;
-	  if ( it->num_connected != 2 || (it->num_connected==2 &&  (angle_nodes(it->connected[ 0 ], i, it->connected[ 1 ])-90)<40)) {
-	      continue;
-	  }
-	  
-	  it->f_x_pos /= 4.0;
-	  it->f_y_pos /= 4.0;
-      }
-
-      return;
-
-  }; // END of SmoothNodes METHOD
-
-
-
-
-
-void FindNodes::findReachableNodes0(int startNode, std::vector<int>& reachable, int only_direction/*=-1*/, bool remove_first/*false*/)
-{
-      reachable.clear();
-      std::vector<int> stack;
-      stack.push_back(startNode);
-      reachable.push_back(startNode);
-      int cnt = 0;
-      while(!stack.empty()){
-	      int nidx = stack.back();
-	      Node& n = (*m_NodeBuffer)[nidx];
-	      stack.pop_back();
-	      for(int i=0;i<n.num_connected;i++){
-		      if(cnt == 0 && only_direction>=0 && i!=only_direction){
-			      // search only in one direction from start point
-			      continue;
-		      }
-		      int neigh = n.connected[i];
-		      Node& n2  = (*m_NodeBuffer)[neigh]; // current node
-		      std::vector<int>::reverse_iterator it = find(reachable.rbegin(),reachable.rend(),neigh);
-		      if(it!=reachable.rend()){ 
-			      // prevent circles
-			      continue;
-		      }
-		      if(n2.num_connected > 2){
-			      // this is a line ending, put it in the list, but do not add it to the stack!
-			      while(n2.num_connected>0){
-				      disconnect_nodes(neigh,n2.connected[0],m_NodeBuffer);
-			      }
-			      //reachable.push_back(neigh);
-			      continue;
-		      }
-		      // now num_connected is either 1 or 2
-		      if(n2.num_connected == 2){	
-			      // if n2 has num_connected == 2, we need to put it on the stack for further investigation
-			      stack.push_back(neigh);
-		      }
-		      reachable.push_back(neigh);  // its _reachable_ OK.
-	      }
-	      cnt++;
-      }
-      if(remove_first)
-	      reachable.erase(reachable.begin()); // hmpf: expensive!
-}
-
-
-
-void FindNodes::findReachableNodes1(int startNode, LinearGraphComponent & lComp, int only_direction/*=-1*/)
-{     
-  
-       lComp.reachableNodeIds.clear();
-       lComp.Lines.clear();
-       lComp.sumOfLength=0;
-      
-      std::vector<int> stack;
-      stack.push_back(startNode);
-      lComp.reachableNodeIds.push_back(startNode);
-//       int cnt = 0;
-      int l_id=0;
-      while(!stack.empty()){
-	      int nidx = stack.back();
-	      Node& n = (* m_NodeBuffer_tmp)[nidx];
-	      stack.pop_back();
-	      
-	      while(n.num_connected>0){
-// 		      if(cnt == 0 && only_direction>=0 && i!=only_direction){
-// 			      // search only in one direction from start point
-// 			      continue;
-// 		      }
-		
-		      int neigh = n.connected[0];
-		      
-		      Node& n2  = (* m_NodeBuffer_tmp)[neigh]; // current node
-		      std::vector<int>::reverse_iterator it = find( lComp.reachableNodeIds.rbegin(), lComp.reachableNodeIds.rend(),neigh);
-		      if(it == lComp.reachableNodeIds.rend()){ 
-			      // prevent circles
-			       lComp.reachableNodeIds.push_back(neigh);
-		      }
-		      
-		      Vec2i p1( (* m_NodeBuffer_tmp)[nidx].f_x_pos, (* m_NodeBuffer_tmp)[nidx].f_y_pos );
-		      Vec2i p2( (* m_NodeBuffer_tmp)[neigh].f_x_pos, (* m_NodeBuffer_tmp)[neigh].f_y_pos );
-		      
-		      lComp.Lines.push_back(Line(l_id++ ,  p1, p2, nidx, neigh));
-		      lComp.sumOfLength += f_distance_nodes(nidx,neigh,m_NodeBuffer_tmp);
-		      
-		      if(n2.num_connected >= 2){
-			  stack.push_back(neigh);
-		      }
-		      
-		      disconnect_nodes(neigh, nidx, m_NodeBuffer_tmp);
-		      
-	      }
-	    // cnt++;
-      }
-      
-      
-//       if(remove_first)
-// 	      reachable.erase(reachable.begin()); // hmpf: expensive!
-}
-
-
-void FindNodes::connectMoreNodes(){
-  
-   int AngleToMerge = params.graphNode.AngleToMerge->get();
-   float MaxLineSegDistance = params.graphNode.MaxLineSegDistance->get();
-   float MaxProjectedDistance = params.graphNode.MaxProjectedDistance->get();
-   
-   Node_Buffer::iterator it1,it2;
-   int i=-1;
-   for ( it1 = m_NodeBuffer->begin( ); it1 != m_NodeBuffer->end( ); it1++ ) { // [0]
-        ++i;
-	if(it1->num_connected >= MAX_CONN){continue;}
-	for( int l=0; l<it1->num_connected; ++l ){
-	  
-	    int j=-1;
-	    for ( it2 = m_NodeBuffer->begin( ); it2!= m_NodeBuffer->end( ); it2++ ) { // [0]
-	        ++j;
-		if( i==j || it2->num_connected >= MAX_CONN ||is_reacherable(i, j)){continue;}
-	        
-		     for( int m=0; m<it2->num_connected; ++m ){
-// 		        if(!is_connected(it1->connected[l],j) && !closes_loop(i,j)){
-		              if(is_reacherable(i, j) ){continue;}
-		              
-			      Vec2i pi( (* m_NodeBuffer)[i].f_x_pos, (* m_NodeBuffer)[i].f_y_pos );
-			      Vec2i pl( (* m_NodeBuffer)[it1->connected[l]].f_x_pos, (* m_NodeBuffer)[it1->connected[l]].f_y_pos );
-			      Vec2i pj( (* m_NodeBuffer)[j].f_x_pos, (* m_NodeBuffer)[j].f_y_pos );
-			      Vec2i pm( (* m_NodeBuffer)[it2->connected[m]].f_x_pos, (* m_NodeBuffer)[it2->connected[m]].f_y_pos );
-			      Line a(1 ,  pi, pl);
-			      Line b(1 ,  pj, pm);
-			    
-
-			      if( m_Math::AngDif( a.ang, b.ang) < AngleToMerge
-			      &&  m_Math::getShortestDistance(a, b) <MaxLineSegDistance
-			      &&  m_Math::GetProjectiveDistance(a.getMidPoint(), b) < MaxProjectedDistance
-			      &&  m_Math::GetProjectiveDistance(b.getMidPoint(), a) < MaxProjectedDistance){
-				
-				      int id1,id2;
-				
-				      if(m_Math::Point2LineSegDistance(pi, b) < m_Math::Point2LineSegDistance(pl,b)){
-					  id1 = i;
-				      }
-				      else { id1 =it1->connected[l] ;   }
-				    
-				      if(m_Math::Point2LineSegDistance(pj,a) < m_Math::Point2LineSegDistance(pm, a)){
-					  id2=j;
-				      }
-				      else { id2 = it2->connected[m] ; }
-				      
-				      if( id1==id2){   cout<<"is reachable "<<i<<"   "<<id1<<"          "<<j<<"    "<<id2<<"    "<< is_reacherable(i,j)<<endl;   }
-				    
-// 				      if(is_reacherable(id1,id2)){continue;}
-				      connect_nodes(id1,id2);
-				      
-				      update_reachable( id1, id2 );
-				      
-			      
-			      }
-		      
-		    }
-
-	      
-	    }
-
-	}
-
-   }
-   
-   
-   float MaxDistanceForMergeNode2  = params.graphNode.MaxDistanceForMergeNode2->get();
-   i=-1;
-   for ( it1 = m_NodeBuffer->begin( ); it1 != m_NodeBuffer->end( ); it1++ ) { // [0]
-        ++i;
-	if(it1->num_connected >= MAX_CONN ||it1->num_connected ==0){continue;}
-
-	   int j=-1;
-	    for ( it2 = m_NodeBuffer->begin( ); it2!= m_NodeBuffer->end( ); it2++ ) { // [0]
-		  ++j;
-		  if( i==j ||it2->num_connected ==0 ||(it2->num_connected +it1->num_connected) > MAX_CONN || is_reacherable(i, j)){continue;}
-		  
-		  if(f_distance_nodes(i,j, m_NodeBuffer ) < MaxDistanceForMergeNode2){
-		    
-		      for( int m=0; m<it2->num_connected; ++m ){
-			  disconnect_nodes(j, it2->connected[m],  m_NodeBuffer);
-			  connect_nodes(i, it2->connected[m] );
-
-		      }
-		      (* m_NodeBuffer)[i].f_x_pos +=(* m_NodeBuffer)[j].f_x_pos;
-		      (* m_NodeBuffer)[i].f_y_pos +=(* m_NodeBuffer)[j].f_y_pos;
-		      
-		      (* m_NodeBuffer)[i].f_x_pos /=2.0;
-		      (* m_NodeBuffer)[i].f_y_pos /=2.0;
-		      
-		      
-			update_reachable( i, j );
-
-		  }
-	    }
-   }
-  
-}
-
-
-
-void FindNodes::mainLoop(FrameGrabber & CamFrm){
-
-    
-    
-//     int MinCmpLineLength = params.graphNode.MinCmpLineLength->get();
-    
-
-//     m_Top =  CamFrm.m_Top * (float(SUB_SAMPLING_HEIGHT)/(float(H)));
-    
-    m_Top = SUB_SAMPLING_HEIGHT-10;
-   
-    UNIT = CamFrm.MaximunNodeNum;
-    
-    findNodes(CamFrm.skeletonPixelMatrix_sub);
-    //   cout<<"num of nodes  "<<m_NodeBuffer->size( )<<endl;
-    ConnectTouchingNodes (CamFrm.skeletonPixelMatrix_sub);
-
-    //   cout<<"1 Num of nodes: "<< m_NodeBuffer->size()<<endl;
-    FindMoreNodes(CamFrm.skeletonPixelMatrix_sub);
-    //   cout<<"2 More Nodes nodes: "<< m_NodeBuffer->size()<<endl;
-    FindCloseNodes( CamFrm.weightedWhiteValues );
-    ConnectCloseNodes (CamFrm.weightedWhiteValues);
-    SmoothNodes ();
-    DeleteNodes ();
-
-  
-    InsertCrossPoints();
-    //   SmoothNodes2 ( /* IN_OUT Node_Buffer * m_NodeBuffer, */ ) ;
-    
-    
-    connectMoreNodes();
-
-    m_NodeBuffer_tmp->clear();
-
-    Node_Buffer::iterator it;
-    for ( it = m_NodeBuffer->begin( ); it != m_NodeBuffer->end(); it++ ) { // [1]
-	Node node= (*it);
-	m_NodeBuffer_tmp->push_back(node);
-
-    }
-
-//       PrintNodeBuffer("NodeBuffer_tmp1.dat", m_NodeBuffer_tmp );
-
-    
-      
-      
-    m_LinearGraph_Buffer->clear();
-    int i=-1;
-    for ( it =  m_NodeBuffer_tmp->begin( ); it !=  m_NodeBuffer_tmp->end(); it++ ) { // [1]
-	++i;
-	LinearGraphComponent linearGraphComp;
-	findReachableNodes1(i, linearGraphComp, -1);
-	if(linearGraphComp.reachableNodeIds.size()>1){
-		m_LinearGraph_Buffer->push_back( linearGraphComp );
-	}
-    }
-  
-
-//       PrintNodeBuffer("NodeBuffer.dat", m_NodeBuffer );
-
-
-      
-
-      
-            
-      vector<Line> alllines;
-      LinearGraph_Buffer::iterator it_;
-      for ( it_ = m_LinearGraph_Buffer->begin( ); it_ != m_LinearGraph_Buffer->end( ); it_++ ) { // 
-	  
-	  if((*it_).sumOfLength < params.graphNode.MinCmpLineLength->get()){continue;}
-	  
-	  vector<Line> ls = it_->Lines;
-	  for(unsigned int lidx=0; lidx<ls.size();++lidx){
-	    
-	    alllines.push_back(ls[lidx] );
-	    
-	  }
-      }
-      
-      
-     float dist = params.graphNode.SamplePointDist->get();
-     
-     m_Math::SamplePointsOnLines(alllines, dist, undistortedNodeSamplePoins);
-      
-      
-      
-      
-//     undistortedNodeSamplePoins.clear();
-//     distortionModel.UndistortP(NodeSamplePoins, undistortedNodeSamplePoins);
-  
-
-  
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1422,70 +67,66 @@ void FindNodes::getRectangle( Rectangle_Buffer &_Rectangles  ){
 
 void FindNodes::findNodeGraph(FrameGrabber & CamFrm){
       m_Top =  CamFrm.m_Top ;
-//       cv::Mat nodeGraph(cv::Size(W *2,(H-m_Top)*2),CV_8UC3,cv::Scalar(150, 150, 150));
-//       
-//       cv::Mat nodeGraph_undistorted(cv::Size(siX , siY),CV_8UC3,cv::Scalar(150, 150, 150));
 
-      
       m_NodeBuffer->clear( ); 
+      
+      //initialize nodes as the centers of rectangles
       findNodes( Rectangles  );
+      //find the candidate connections for each nodes and weight them
       FindCloseNodes2 (CamFrm.weightedWhiteValues );
+      //iteratively connect the candidate connection that has largest weight
       ConnectCloseNodes2 (CamFrm.weightedWhiteValues );
-     
-//       DeleteNodes2 ();
-//       InsertCrossPoints();
-//       SmoothNodes ();
+      //smooth the nodes according to their neighborhoods
+      SmoothNodes2();
       
-//       connectMoreNodes();
+//        PrintNodeBuffer("NodeBuffer.dat", m_NodeBuffer );
       
-
-
+      
+      // make a copy of current node graph
       m_NodeBuffer_tmp->clear();
       Node_Buffer::iterator it;
       
       for ( it = m_NodeBuffer->begin( ); it != m_NodeBuffer->end(); it++ ) { // [1]
 	  Node node= (*it);
 	  m_NodeBuffer_tmp->push_back(node);
-// 	  cv::circle(nodeGraph,cv::Point( (*it).x_pos *2,((*it).y_pos -m_Top)*2),4, cv::Scalar(0, 10, 200),-1);
-// 	  cv::circle(nodeGraph_undistorted,cv::Point( (*it).undistorted_x_pos ,(*it).undistorted_y_pos ),4, cv::Scalar(0, 10, 200),-1);
-
 
       }
-
        m_LinearGraph_Buffer->clear();
       
-       findReachableNodes2(m_NodeBuffer_tmp);
-
-//        PrintNodeBuffer("NodeBuffer.dat", m_NodeBuffer );
-
-        std::sort(m_LinearGraph_Buffer->begin(), m_LinearGraph_Buffer->end(),  
-	boost::bind(&LinearGraphComponent::sumOfLength, _1) > boost::bind(&LinearGraphComponent::sumOfLength, _2));
+       
+       
+      // cluster the node clusters and save the clusters in m_LinearGraph_Buffer
+      findReachableNodes2(m_NodeBuffer_tmp);
+      std::sort(m_LinearGraph_Buffer->begin(), m_LinearGraph_Buffer->end(),  
+      boost::bind(&LinearGraphComponent::sumOfLength, _1) > boost::bind(&LinearGraphComponent::sumOfLength, _2));
+    
+      //try to connect more nodes
+      connectSingleNodes();
       
+      
+      //calculating and saving some usefull information of the line clusters
+      updateUndistoredLines();
 
-         connectComps();
-//         
-	 updateUndistoredLines();
-//         
-// 	
-	 updateNodeAngle();
-	 
-	 updateNodeTangentLine();
-	 
-	 MergeMoreComps();
-//           PrintReacherableComp("reachableComp1");
-	 removeSmallComp();
-	 
-	 updateCompPoints();
-	 
+      updateNodeAngle();
+      
+      updateNodeTangentLine();
+      
+      updateNodeWeights();
+      
+      MergeMoreComps();
+      
+      removeSmallComp();
+      
+      updateCompPoints();
+      
 // 	 PrintReacherableComp("reachableComp");
-  
+
   
 }
 
 void FindNodes::findNodes( /* in_out */ Rectangle_Buffer & Rectangles /* OUT Node_Buffer * m_NodeBuffer, */ ){
-//     int  dim = 2;
-//     int M_num = Rectangles.size();
-//     M_data.resize(boost::extents[M_num][dim]);
+
+  
     for(unsigned int i=0; i<  Rectangles.size(); i++){
 		  Node node;
 		  node.x_pos = Rectangles[i].avg_x;
@@ -1499,13 +140,8 @@ void FindNodes::findNodes( /* in_out */ Rectangle_Buffer & Rectangles /* OUT Nod
 		  node.num_close = 0;
 		  node.crossing_type = Node::CT_Unknown;
 		  m_NodeBuffer->push_back(node);
-		  
-		  
-// 		   M_data[i][0]  = Rectangles[i].center_x;
-// 		   M_data[i][1]  = Rectangles[i].center_y ;
-
     }
-//     M_tree = new kdtree::KDTree(M_data);
+
 }
 
 
@@ -1521,20 +157,11 @@ void FindNodes::FindCloseNodes2 ( /* in */const float ( & weightedWhiteValues )[
 //     int fac; //<- Indicates the size of the gaps, which may be closed.
     int ang, dist;
     
-//     int  LINE_WIDTH = params.graphNode.LineWidth->get();
-//         rad = max<int>( 5, ( LINE_WIDTH ) );
-//     int  SMALL_ANG = params.graphNode.SmallAngle->get();
-//     fac = ( H >> 2 ) + LINE_WIDTH * 2;
-
-    
     rad = max<int>( 5, params.graphNode._NeighborRadius->get() );
     int MaxCloseNum = params.graphNode._MaxCloseNum->get();
     int  MinAngle = params.graphNode._MinAngle->get();
     
     
-//     rad = rad *rad  ;
-
-    // * For all nodes do .... * //
     Node_Buffer::iterator it;
     for ( it = m_NodeBuffer->begin( ); it != m_NodeBuffer->end( ); it++ ) { // [0]
 	i++;
@@ -1646,9 +273,10 @@ void FindNodes::FindCloseNodes2 ( /* in */const float ( & weightedWhiteValues )[
 	    it->close_id[ it->num_close ] = j;
 // 	    it->close_adj[ it->num_close ] = /*fac **/ ( ang - MinAngle ) * black_line_value( weightedWhiteValues, i, j ) / ( dist + 1 );//prefer large ang, small dist, high brightness
 
-//             it->close_adj[ it->num_close ] = num_pointsi * areai *num_pointsj * areaj * ( ang - MinAngle ) 
+//          it->close_adj[ it->num_close ] = num_pointsi * areai *num_pointsj * areaj * ( ang - MinAngle ) 
 // 	                                  * black_line_value2( weightedWhiteValues, i, j ) / ( dist + 1  );
 					  
+	    //weight for this candidate connection
             it->close_adj[ it->num_close ] = num_pointsi * areai *num_pointsj * areaj * ( ang - MinAngle ) 
 	                                  * black_line_value2( weightedWhiteValues, i, j ) / ( dist_closest + 1  ) *0.0001;
 // 					  //prefer large ang, small dist, high brightness
@@ -1806,6 +434,54 @@ void FindNodes::ConnectCloseNodes2 ( /* in */ const float ( & weightedWhiteValue
 }; // END of ConnectCloseNodes METHOD
 
 
+// ****************************************************************************** //
+  void FindNodes::SmoothNodes2 ( /* IN_OUT Node_Buffer * m_NodeBuffer, */ )
+  // ****************************************************************************** //
+  {
+      int i;
+      int j, k;
+      i=-1;
+      Node_Buffer::iterator it;
+      for ( it = m_NodeBuffer->begin( ); it != m_NodeBuffer->end( ); it++ ) {
+	  if ( it->num_connected > 0){  
+	    it->x_pos =  it->f_x_pos;
+	    it->y_pos =  it->f_y_pos;
+	  }
+      }
+      
+      
+      
+      for ( it = m_NodeBuffer->begin( ); it != m_NodeBuffer->end( ); it++ ) {
+          ++i;
+	  
+	  if ( it->num_connected != 2  || (it->num_connected==2 &&  (angle_nodes(it->connected[ 0 ], i, it->connected[ 1 ])-90)<40)) {
+	      continue;
+	  }
+
+	  it->f_x_pos = ( float ) it->x_pos * 2;
+	  it->f_y_pos = ( float ) it->y_pos * 2;
+
+	  for ( j = 0; j < it->num_connected; j++ ) {
+	      k = it->connected[ j ];
+
+	      it->f_x_pos += ( * m_NodeBuffer )[ k ].x_pos;
+	      it->f_y_pos += ( * m_NodeBuffer )[ k ].y_pos;
+	  }
+      }
+      i=-1;
+      for ( it = m_NodeBuffer->begin( ); it != m_NodeBuffer->end( ); it++ ) {
+          ++i;
+	  if ( it->num_connected != 2 || (it->num_connected==2 &&  (angle_nodes(it->connected[ 0 ], i, it->connected[ 1 ])-90)<40)) {
+	      continue;
+	  }
+	  
+	  it->f_x_pos /= 4.0;
+	  it->f_y_pos /= 4.0;
+      }
+
+      return;
+
+  }; // END of SmoothNodes METHOD
 
 
 void FindNodes::findReachableNodes2( Node_Buffer * nodeBuffer)
@@ -2153,7 +829,94 @@ void FindNodes::findReachableNodes2( Node_Buffer * nodeBuffer)
    
   
 }
-      
+  
+  
+void FindNodes::connectSingleNodes(){
+  
+   int MaxAngleDiff = params.graphNode._MaxAngleDiff->get();
+   float MaxLineSegDistance = params.graphNode._MaxLineSegDistance->get();
+   float MaxProjectedDistance = params.graphNode._MaxProjectedDistance->get();
+//    int Min_angle = params.graphNode._MinAngleForSameComp->get();
+//    int SmallAngle = params.graphNode.SmallAngle->get();
+   
+   bool NoUpdate = false;
+   
+   int iter_count=0;
+   while (!NoUpdate && iter_count<100){
+       iter_count++;
+     
+	LinearGraph_Buffer::iterator it_1, it_2;
+	int changeTimes= 0;
+	int connect=0;
+	
+	
+	for ( it_1 =  m_LinearGraph_Buffer->begin( ); it_1 != m_LinearGraph_Buffer->end( ); it_1++ ) { // 
+	        if((*it_1).reachableNodeIds.size() <=1){continue;} 
+	        
+	        vector<int> ends1;
+	        ends1.push_back((*it_1).reachableNodeIds.front());
+		ends1.push_back((*it_1).reachableNodeIds.back());
+		
+		for ( it_2 = it_1+1; it_2 != m_LinearGraph_Buffer->end( ); it_2++ ) { // 
+		  
+		      if((*it_2).reachableNodeIds.size() != 1 ){continue;} 
+
+			
+		     connect = 0;
+                     float dist;
+		     int nodeIda;
+		     int nodeIdb =(*it_2).reachableNodeIds.front();
+		     Line a;
+		     float dist1 = f_distance_nodes2( ends1[0], nodeIdb, m_NodeBuffer );
+		     float dist2 = f_distance_nodes2( ends1[1], nodeIdb, m_NodeBuffer );
+		     if(dist1 > dist2){nodeIda = ends1[1]; dist = dist2; a = (*it_1).Lines.back();}
+		     else {nodeIda = ends1[0]; dist = dist1; a = (*it_1).Lines.front();}
+		      
+		      if(dist > MaxLineSegDistance ){continue;}
+
+		      
+		     
+		      Vec2i Pa( (* m_NodeBuffer)[nodeIda].f_x_pos, (* m_NodeBuffer)[nodeIda].f_y_pos);
+		      Vec2i Pb( (* m_NodeBuffer)[nodeIdb].f_x_pos, (* m_NodeBuffer)[nodeIdb].f_y_pos);
+		     
+		      Line ab(0, Pa,Pb);
+
+		      if(m_Math::GetProjectiveDistance(Pb, a) > MaxProjectedDistance){continue;}  
+		      if(m_Math::AngDif(a.ang, ab.ang) > MaxAngleDiff ){ continue;}
+		      if(m_Math::isProjectedInsideLineSeg(Pb, a)){continue;}
+		      
+		      
+                    
+
+		      if(nodeIda == ends1[0]){ 
+                        (*it_1).reachableNodeIds.insert ( (*it_1).reachableNodeIds.begin() , nodeIdb );
+			(*it_1).Lines.insert ( (*it_1).Lines.begin() ,   Line(0 ,Pb, Pa, nodeIdb, nodeIda) );
+			(*it_1).sumOfLength += (*it_1).Lines.front().len;
+		      }
+		      else{
+			 (*it_1).reachableNodeIds.push_back( nodeIdb );
+			 (*it_1).Lines.push_back(Line(0 ,Pa, Pb, nodeIda, nodeIdb) );
+			 (*it_1).sumOfLength += (*it_1).Lines.back().len;
+		      }
+
+
+		      (*it_2).reachableNodeIds.clear();
+		      (*it_2).Lines.clear();
+		      (*it_2).sumOfLength = 0;
+					      
+		      connect=1; changeTimes++;
+		      
+
+		}
+	 
+	}
+// 	cout<<"iterCound "<< iter_count <<"changeTimes  "<<changeTimes<<endl;
+	if(changeTimes==0){NoUpdate=1;}
+   }
+   
+   
+  
+}
      
 
 void FindNodes::updateUndistoredLines(){//vector<Line>  UndistortedLines;
@@ -2192,35 +955,7 @@ void FindNodes::updateNodeAngle(){//vector<float>  NodeAngles;
 	      vector<Line> &undistortedLs = it_->UndistortedLines;
 	      
 	      NodeAngles.clear();
-	     
-	      
-// 	      for(unsigned int nidx=0; nidx < nodes.size();++nidx){
-// 		    
-// 		    if(nidx ==0){ 
-// 		      NodeAngles.push_back( undistortedLs.front().ang); 
-// 		      
-// 		    }
-// 		    else if(nidx == num_nodes -1){
-// 		      
-// 		       NodeAngles.push_back( undistortedLs.back().ang); 
-// 		      
-// 		    }
-// 		    else{
-// 		      float ang1= undistortedLs[nidx-1].ang;
-// 		      float ang2= undistortedLs[nidx+1].ang;
-// 		      
-// 		      if(m_Math::AngDif(ang1, ang2)>0.5*M_PI ){
-// 			if(ang1 <0){ ang1 += M_PI;}
-// 			else{ ang2 += M_PI; }
-// 
-// 		      }
-// 		      float ang_avg = (ang1 + ang2)/2.0;
-//         	      NodeAngles.push_back(m_Math::CorrectAngleRadian180(ang_avg)); 
-// 		      
-// 		    }
-// 		
-// 	      }
-	      
+
 	      
 	       NodeAngles.push_back( undistortedLs.front().ang); 
 	      
@@ -2232,19 +967,19 @@ void FindNodes::updateNodeAngle(){//vector<float>  NodeAngles;
 		  p0 = Vec2i((*m_NodeBuffer)[nodes[nidx]].undistorted_x_pos,(*m_NodeBuffer)[nodes[nidx]].undistorted_y_pos);
 		  
 
-		  if(nidx ==0){ 
-		      p2 = Vec2i((*m_NodeBuffer)[nodes[1]].undistorted_x_pos,(*m_NodeBuffer)[nodes[1]].undistorted_y_pos);
-		      ang = m_Math::getAngle( p0, p2 );
-
-	
-		      
-		}
-		  else if(nidx == num_nodes -1){ 
-		      p1 = Vec2i((*m_NodeBuffer)[nodes[ num_nodes -2]].undistorted_x_pos,(*m_NodeBuffer)[nodes[ num_nodes -2]].undistorted_y_pos);
-		      ang = m_Math::getAngle( p0, p1 );
-		    
-		}
-		  else{
+// 		  if(nidx ==0){ 
+// 		      p2 = Vec2i((*m_NodeBuffer)[nodes[1]].undistorted_x_pos,(*m_NodeBuffer)[nodes[1]].undistorted_y_pos);
+// 		      ang = m_Math::getAngle( p0, p2 );
+//                  
+// 		      
+// 		}
+// 		  else if(nidx == num_nodes -1){ 
+// 		      p1 = Vec2i((*m_NodeBuffer)[nodes[ num_nodes -2]].undistorted_x_pos,(*m_NodeBuffer)[nodes[ num_nodes -2]].undistorted_y_pos);
+// 		      ang = m_Math::getAngle( p0, p1 );
+// // 		      ang = m_Math::CorrectAngleRadian180(ang  + 0.5*M_PI);
+// 		  
+// 		}
+// 		  else{
 		      p1 = Vec2i((*m_NodeBuffer)[nodes[nidx -1]].undistorted_x_pos,(*m_NodeBuffer)[nodes[nidx -1]].undistorted_y_pos);
 		      p2 = Vec2i((*m_NodeBuffer)[nodes[nidx +1]].undistorted_x_pos,(*m_NodeBuffer)[nodes[nidx +1]].undistorted_y_pos);
 		      ang1 = m_Math::getAngle2PI( p0, p1 );
@@ -2256,8 +991,8 @@ void FindNodes::updateNodeAngle(){//vector<float>  NodeAngles;
 		      
 		      ang = m_Math::CorrectAngleRadian180(ang);
 		      
-
-		  }
+//                       ang = m_Math::getAngle( p0, p1 );
+// 		  }
 		  
 		  
 
@@ -2341,6 +1076,56 @@ void FindNodes::updateNodeTangentLine(){//vector<Line>  TangentLines;
   
 }
   
+
+  void FindNodes::updateNodeWeights(){//vector<Line>  TangentLines;
+  LinearGraph_Buffer::iterator it_;
+  for ( it_ = m_LinearGraph_Buffer->begin( ); it_ != m_LinearGraph_Buffer->end( ); it_++ ) { // 
+        vector<int> &nodes = it_->reachableNodeIds;
+	int num_nodes = nodes.size();
+	vector<Line>  & lines = it_->Lines;
+	vector<float> & NodeWeights = it_->NodeWeights;
+	
+	NodeWeights.clear();
+	
+	if(num_nodes==1){
+	  NodeWeights.push_back(0.0);;
+	}
+	else if(num_nodes>=2){
+	  
+	        
+	      for(unsigned int nidx=0; nidx < nodes.size();++nidx){
+		    
+		    if(nidx ==0){ 
+		      NodeWeights.push_back( lines.front().len); 
+		      
+		      
+		    }
+		    else if(nidx == num_nodes -1){
+		      
+		       NodeWeights.push_back( lines.back().len); 
+		      
+		    }
+		    else{
+		      float len1= lines[nidx-1].len;
+		      float len2= lines[nidx].len;
+
+        	      NodeWeights.push_back((len1 + len2)/2.0); 
+		      
+		    }
+// 		    if(NodeWeights.back()==0){
+// 		      cout<<" num_nodes "<< num_nodes<<" lines.size "<<lines.size() <<"oh-----------------------"<<endl;
+// 		      cout<<lines[0].s[0]<<", "<<lines[0].s[1]<<", "<<lines[0].e[0]<<", "<<lines[0].e[1]<<endl;
+// 		      cout<<nodes.front()<<"  "<<nodes.back()<<endl;
+// 		    }
+		
+	      }
+	}
+    
+  }
+  
+}
+  
+  
 void FindNodes::MergeMoreComps(){  
    
       
@@ -2357,7 +1142,6 @@ void FindNodes::MergeMoreComps(){
 	
 	    LinearGraph_Buffer::iterator it_1, it_2;
 	    int changeTimes= 0;
-	    
 	    
 	    
 	    for ( it_1 =  m_LinearGraph_Buffer->begin( ); it_1 != m_LinearGraph_Buffer->end( ); it_1++ ) { // 
@@ -2488,6 +1272,7 @@ void FindNodes::MergeMoreComps(){
 			  (*it_1).UndistortedLines.insert((*it_1).UndistortedLines.end(), (*it_2).UndistortedLines.begin(), (*it_2).UndistortedLines.end());
 			  (*it_1).UndistortedNodeAngles.insert((*it_1).UndistortedNodeAngles.end(), (*it_2).UndistortedNodeAngles.begin(), (*it_2).UndistortedNodeAngles.end());
 			  (*it_1).TangentLines.insert((*it_1).TangentLines.end(), (*it_2).TangentLines.begin(), (*it_2).TangentLines.end());
+			  (*it_1).NodeWeights.insert((*it_1).NodeWeights.end(), (*it_2).NodeWeights.begin(), (*it_2).NodeWeights.end());
 			  (*it_1).sumOfLength += (*it_2).sumOfLength;
 			  (*it_1).sumOfLengthUndistorted += (*it_2).sumOfLengthUndistorted;
 
@@ -2504,10 +1289,6 @@ void FindNodes::MergeMoreComps(){
 			  (*it_1).sumOfLengthUndistorted += (*it_1).UndistortedLines.back().len;
 			  
 					  
-			  
-			  
-
-	    
 			  
 			  (*it_2).reachableNodeIds.clear();
 			  (*it_2).Lines.clear();
@@ -2528,22 +1309,6 @@ void FindNodes::MergeMoreComps(){
       
   
 }
- 
- void FindNodes::updateCompPoints(){//vector<float>  NodeAngles;
-  
-     LinearGraph_Buffer::iterator it_;
-    for ( it_ = m_LinearGraph_Buffer->begin( ); it_ != m_LinearGraph_Buffer->end( ); it_++ ) { // 
-  	     vector<int> &nodes = it_->reachableNodeIds;
-	     it_->Points.clear();
-	     for(int i= 0; i < nodes.size(); ++i){
-	       
-	         Vec2i p((*m_NodeBuffer)[nodes[i]].undistorted_x_pos,(*m_NodeBuffer)[nodes[i]].undistorted_y_pos);
-	         it_->Points.push_back(p);
-	    }
-    }
-  
-
-}    
 
 
 void FindNodes::removeSmallComp (){
@@ -2562,6 +1327,31 @@ void FindNodes::removeSmallComp (){
       
 	
 }
+
+ void FindNodes::updateCompPoints(){//vector<float>  NodeAngles;
+  
+     LinearGraph_Buffer::iterator it_;
+    for ( it_ = m_LinearGraph_Buffer->begin( ); it_ != m_LinearGraph_Buffer->end( ); it_++ ) { // 
+  	     vector<int> &nodes = it_->reachableNodeIds;
+	     it_->Points.clear();
+	     for(int i= 0; i < nodes.size(); ++i){
+	       
+	         Vec2i p((*m_NodeBuffer)[nodes[i]].undistorted_x_pos,(*m_NodeBuffer)[nodes[i]].undistorted_y_pos);
+	         it_->Points.push_back(p);
+	    }
+    }
+  
+
+}    
+
+
+
+
+
+
+
+
+
 
 
 

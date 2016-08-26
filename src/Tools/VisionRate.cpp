@@ -1,8 +1,8 @@
-//VisionRate.cpp
-// Created on: May 21, 2015
-//     Author: Hafez Farazi <farazi@ais.uni-bonn.de>
+//DistotionModel.cpp
+// Created on: April 12, 2014
+//    
 
-// #include "VisionRate.h"
+//Authors: Yongfeng
 #include <visual_tracking/Tools/VisionRate.h>
 VisionRate::VisionRate(double rate, bool _steady) :
 		timer(io_service), timer2(io_service), steady(_steady)

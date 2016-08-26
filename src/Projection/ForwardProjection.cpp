@@ -1,4 +1,8 @@
-// #include "ForwardProjection.h"
+
+// Created on: April 12, 2015
+//    
+
+//Authors: Yongfeng
 #include <visual_tracking/Projection/ForwardProjection.h>
 
 #include <stdlib.h>     /* srand, rand */
@@ -124,7 +128,7 @@ void ForwardProjection::generateFieldPoints(){
       //Points on Center Circle
       int id =-1;
       for(int i=0 ; i <4*10; i++){// center circle
-	  double theta = i * 2* M_PI /(4*10.0);
+	  double theta = i * 2* M_PI /(4*10);
 // 	  cout<<" id "<<id<<endl;
 	  PointsInWorldCord.push_back( make_pair( tf::Vector3( fieldInfo.H/2.0  *cos(theta) , fieldInfo.H/2.0  *sin(theta), 0 ), id));
 	  id--;

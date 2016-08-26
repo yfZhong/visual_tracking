@@ -55,6 +55,7 @@ namespace vision
 			Mat rawHSV;
 			Mat Brightness_Channel;
 			Mat GreenBinary;
+			Mat LineBinary;
 			
 			Mat fieldConvexHullMat;
 			vector<cv::Point> fieldConvexHullPoints;

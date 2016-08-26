@@ -1,7 +1,8 @@
-//CameraDummy.cpp
-// Created on: Apr 19, 2015
-//     Author: Hafez Farazi <farazi@ais.uni-bonn.de>
-// #include "CameraDummy.h"
+
+// Created on: April 12, 2014
+//    
+
+//Authors: Yongfeng
 #include <visual_tracking/camera/CameraDummy.h>
 bool CameraDummy::InitCameraDevice(bool first)
 {
